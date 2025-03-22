@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using AspnetCoreMvcFull.DTOs;
 using AspnetCoreMvcFull.Services;
 using AspnetCoreMvcFull.Filters;
@@ -7,6 +8,7 @@ namespace AspnetCoreMvcFull.Controllers.Api
 {
   [Route("api/[controller]")]
   [ApiController]
+  [Authorize]
   [ServiceFilter(typeof(GlobalExceptionFilter))]
   public class HazardsController : ControllerBase
   {

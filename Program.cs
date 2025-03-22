@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.OpenApi.Models;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -20,9 +21,27 @@ builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 builder.Services.AddScoped<ICraneService, CraneService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IHazardService, HazardService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Registrasi Filter
 builder.Services.AddScoped<GlobalExceptionFilter>();
+builder.Services.AddScoped<AuthorizationFilter>();
+
+// Konfigurasi Autentikasi
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+      options.Cookie.Name = "CraneBookingAuth";
+      options.Cookie.HttpOnly = true;
+      options.ExpireTimeSpan = TimeSpan.FromHours(8);
+      options.SlidingExpiration = true;
+      options.LoginPath = "/Auth/Login";
+      options.LogoutPath = "/Auth/Logout";
+      options.AccessDeniedPath = "/Auth/AccessDenied";
+      options.Cookie.SameSite = SameSiteMode.Strict;
+      options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    });
 
 // Menambahkan layanan untuk Controller dan Views
 builder.Services.AddControllersWithViews()
@@ -46,8 +65,34 @@ builder.Services.AddSwaggerGen(c =>
     Version = "v1",
     Description = "API CraneBookingApp"
   });
+
   // enum to string
   c.UseInlineDefinitionsForEnums();
+
+  // Konfigurasi Swagger untuk autentikasi
+  c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+  {
+    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+    Name = "Authorization",
+    In = ParameterLocation.Header,
+    Type = SecuritySchemeType.ApiKey,
+    Scheme = "Bearer"
+  });
+
+  c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] { }
+        }
+    });
 });
 
 // hangfire
@@ -87,6 +132,8 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+// Tambahkan middleware autentikasi sebelum autorisasi
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Menyiapkan routing untuk controller
