@@ -47,7 +47,7 @@ namespace AspnetCoreMvcFull.Controllers
       {
         var response = await _authService.LoginAsync(model);
 
-        if (!response.Success)
+        if (!response.Success || response.User == null)
         {
           ModelState.AddModelError(string.Empty, response.Message);
           return View(model);
