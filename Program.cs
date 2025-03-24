@@ -1,12 +1,16 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi.Models;
+using Microsoft.IdentityModel.Tokens;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 using AspnetCoreMvcFull.Data;
 using AspnetCoreMvcFull.Services;
 using AspnetCoreMvcFull.Filters;
 using AspnetCoreMvcFull.Converters;
+using AspnetCoreMvcFull.Middleware;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,19 +33,108 @@ builder.Services.AddScoped<GlobalExceptionFilter>();
 builder.Services.AddScoped<AuthorizationFilter>();
 
 // Konfigurasi Autentikasi
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+builder.Services.AddAuthentication(options =>
+{
+  options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+  options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+  options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+  var jwtKey = builder.Configuration["Jwt:Key"];
+  var key = Encoding.UTF8.GetBytes(jwtKey ?? throw new InvalidOperationException("JWT Key tidak ditemukan"));
+
+  options.TokenValidationParameters = new TokenValidationParameters
+  {
+    ValidateIssuer = true,
+    ValidateAudience = true,
+    ValidateLifetime = true,
+    ValidateIssuerSigningKey = true,
+    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+    ValidAudience = builder.Configuration["Jwt:Audience"],
+    IssuerSigningKey = new SymmetricSecurityKey(key)
+  };
+
+  // Tambahkan events untuk menangani responses
+  options.Events = new JwtBearerEvents
+  {
+    OnMessageReceived = context =>
     {
-      options.Cookie.Name = "CraneBookingAuth";
-      options.Cookie.HttpOnly = true;
-      options.ExpireTimeSpan = TimeSpan.FromHours(8);
-      options.SlidingExpiration = true;
-      options.LoginPath = "/Auth/Login";
-      options.LogoutPath = "/Auth/Logout";
-      options.AccessDeniedPath = "/Auth/AccessDenied";
-      options.Cookie.SameSite = SameSiteMode.Strict;
-      options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    });
+      // Cek cookie untuk token jika tidak ada di header
+      if (string.IsNullOrEmpty(context.Token) &&
+              context.Request.Cookies.TryGetValue("jwt_token", out string? token))
+      {
+        context.Token = token;
+      }
+      return Task.CompletedTask;
+    },
+    OnChallenge = context =>
+    {
+      // Override challenge response untuk API endpoints
+      if (context.Request.Path.StartsWithSegments("/api"))
+      {
+        // Mencegah default challenge
+        context.HandleResponse();
+
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        context.Response.ContentType = "application/json";
+
+        return context.Response.WriteAsync("{\"message\":\"Anda perlu login untuk mengakses resource ini.\"}");
+      }
+
+      return Task.CompletedTask;
+    }
+  };
+})
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+  options.Cookie.Name = "CraneBookingAuth";
+  options.Cookie.HttpOnly = true;
+  options.ExpireTimeSpan = TimeSpan.FromHours(8);
+  options.SlidingExpiration = true;
+  options.LoginPath = "/Auth/Login";
+  options.LogoutPath = "/Auth/Logout";
+  options.AccessDeniedPath = "/Auth/AccessDenied";
+  options.Cookie.SameSite = SameSiteMode.Strict;
+  options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+
+  // Tambahkan event handler untuk menangani MVC requests secara berbeda dari API
+  options.Events = new CookieAuthenticationEvents
+  {
+    OnRedirectToLogin = context =>
+    {
+      // Jika request untuk endpoint API, kembalikan 401 daripada redirect
+      if (context.Request.Path.StartsWithSegments("/api") ||
+              (context.Request.Headers.TryGetValue("Accept", out var acceptHeaders) &&
+               acceptHeaders.Any(h => h?.Contains("application/json") == true)))
+      {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        context.Response.ContentType = "application/json";
+        return context.Response.WriteAsync("{\"message\":\"Anda perlu login untuk mengakses resource ini.\"}");
+      }
+
+      // Untuk request MVC biasa, redirect ke login
+      context.Response.Redirect(context.RedirectUri);
+      return Task.CompletedTask;
+    },
+    OnRedirectToAccessDenied = context =>
+    {
+      // Jika request untuk endpoint API, kembalikan 403 daripada redirect
+      if (context.Request.Path.StartsWithSegments("/api") ||
+              (context.Request.Headers.TryGetValue("Accept", out var acceptHeaders) &&
+               acceptHeaders.Any(h => h?.Contains("application/json") == true)))
+      {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        context.Response.ContentType = "application/json";
+        return context.Response.WriteAsync("{\"message\":\"Anda tidak memiliki izin untuk mengakses resource ini.\"}");
+      }
+
+      // Untuk request MVC biasa, redirect ke halaman access denied
+      context.Response.Redirect(context.RedirectUri);
+      return Task.CompletedTask;
+    }
+  };
+});
 
 // Menambahkan layanan untuk Controller dan Views
 builder.Services.AddControllersWithViews()
@@ -132,7 +225,10 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Tambahkan middleware autentikasi sebelum autorisasi
+// Tambahkan middleware JWT Cookie SEBELUM middleware autentikasi
+app.UseJwtCookieMiddleware();
+
+// Tambahkan middleware autentikasi dan autorisasi
 app.UseAuthentication();
 app.UseAuthorization();
 

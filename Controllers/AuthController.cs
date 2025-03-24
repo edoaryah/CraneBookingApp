@@ -87,8 +87,10 @@ namespace AspnetCoreMvcFull.Controllers
         Response.Cookies.Append("jwt_token", response.Token, new CookieOptions
         {
           HttpOnly = true,
-          Secure = true, // Set to true in production with HTTPS
-          SameSite = SameSiteMode.Strict,
+          // Secure = true,
+          // SameSite = SameSiteMode.Strict,
+          Secure = false,
+          SameSite = SameSiteMode.Lax,
           Expires = DateTimeOffset.UtcNow.AddHours(8)
         });
 

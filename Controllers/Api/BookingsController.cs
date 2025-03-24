@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Authorization;
 using AspnetCoreMvcFull.DTOs;
 using AspnetCoreMvcFull.Services;
 using AspnetCoreMvcFull.Filters;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace AspnetCoreMvcFull.Controllers.Api
 {
   [Route("api/[controller]")]
   [ApiController]
-  [Authorize]
+  // [Authorize]
+  [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
   [ServiceFilter(typeof(GlobalExceptionFilter))]
   public class BookingsController : ControllerBase
   {
