@@ -26,6 +26,7 @@ namespace AspnetCoreMvcFull.DTOs
     public CraneStatus? Status { get; set; }
   }
 
+  // DTOs/CraneDto.cs - Update UrgentLogDto
   public class UrgentLogDto
   {
     public int Id { get; set; }
@@ -34,6 +35,8 @@ namespace AspnetCoreMvcFull.DTOs
     public int EstimatedUrgentDays { get; set; }
     public int EstimatedUrgentHours { get; set; }
     public DateTime UrgentEndTime { get; set; }
+    public DateTime? ActualUrgentEndTime { get; set; }
+    public string? HangfireJobId { get; set; }
     public required string Reasons { get; set; }
   }
 

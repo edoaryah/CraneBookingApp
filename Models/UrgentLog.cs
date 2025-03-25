@@ -1,3 +1,4 @@
+// Models/UrgentLog.cs
 using System.ComponentModel.DataAnnotations;
 
 namespace AspnetCoreMvcFull.Models
@@ -21,6 +22,12 @@ namespace AspnetCoreMvcFull.Models
 
     [Required]
     public DateTime UrgentEndTime { get; set; }
+
+    // Kolom baru untuk mencatat waktu crane kembali available secara manual
+    public DateTime? ActualUrgentEndTime { get; set; }
+
+    // Kolom untuk menyimpan Hangfire JobId
+    public string? HangfireJobId { get; set; }
 
     [Required]
     public required string Reasons { get; set; }

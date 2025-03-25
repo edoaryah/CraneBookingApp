@@ -1,3 +1,4 @@
+// Services/CraneService.cs
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using AspnetCoreMvcFull.Data;
@@ -10,10 +11,12 @@ namespace AspnetCoreMvcFull.Services
   public class CraneService : ICraneService
   {
     private readonly AppDbContext _context;
+    private readonly ILogger<CraneService> _logger;
 
-    public CraneService(AppDbContext context)
+    public CraneService(AppDbContext context, ILogger<CraneService> logger)
     {
       _context = context;
+      _logger = logger;
     }
 
     public async Task<IEnumerable<CraneDto>> GetAllCranesAsync()
@@ -32,7 +35,7 @@ namespace AspnetCoreMvcFull.Services
     public async Task<CraneDetailDto> GetCraneByIdAsync(int id)
     {
       var crane = await _context.Cranes
-          .Include(c => c.UrgentLogs)
+          .Include(c => c.UrgentLogs.OrderByDescending(ul => ul.UrgentStartTime))
           .FirstOrDefaultAsync(c => c.Id == id);
 
       if (crane == null)
@@ -54,6 +57,8 @@ namespace AspnetCoreMvcFull.Services
           EstimatedUrgentDays = ul.EstimatedUrgentDays,
           EstimatedUrgentHours = ul.EstimatedUrgentHours,
           UrgentEndTime = TimeZoneHelper.UtcToWita(ul.UrgentEndTime),
+          ActualUrgentEndTime = ul.ActualUrgentEndTime.HasValue ? TimeZoneHelper.UtcToWita(ul.ActualUrgentEndTime.Value) : null,
+          HangfireJobId = ul.HangfireJobId,
           Reasons = ul.Reasons
         }).ToList() ?? new List<UrgentLogDto>()
       };
@@ -81,6 +86,8 @@ namespace AspnetCoreMvcFull.Services
         EstimatedUrgentDays = ul.EstimatedUrgentDays,
         EstimatedUrgentHours = ul.EstimatedUrgentHours,
         UrgentEndTime = TimeZoneHelper.UtcToWita(ul.UrgentEndTime),
+        ActualUrgentEndTime = ul.ActualUrgentEndTime.HasValue ? TimeZoneHelper.UtcToWita(ul.ActualUrgentEndTime.Value) : null,
+        HangfireJobId = ul.HangfireJobId,
         Reasons = ul.Reasons
       }).ToList();
     }
@@ -108,7 +115,10 @@ namespace AspnetCoreMvcFull.Services
 
     public async Task UpdateCraneAsync(int id, CraneUpdateWithUrgentLogDto updateDto)
     {
-      var existingCrane = await _context.Cranes.FindAsync(id);
+      var existingCrane = await _context.Cranes
+          .Include(c => c.UrgentLogs.OrderByDescending(u => u.UrgentStartTime).Take(1))
+          .FirstOrDefaultAsync(c => c.Id == id);
+
       if (existingCrane == null)
       {
         throw new KeyNotFoundException($"Crane with ID {id} not found");
@@ -166,11 +176,51 @@ namespace AspnetCoreMvcFull.Services
           await _context.SaveChangesAsync();
 
           // Menjadwalkan BackgroundJob untuk mengubah status crane menjadi Available setelah UrgentEndTime
-          BackgroundJob.Schedule(() => ChangeCraneStatusToAvailableAsync(existingCrane.Id), urgentLog.UrgentEndTime);
+          string jobId = BackgroundJob.Schedule(() => ChangeCraneStatusToAvailableAsync(existingCrane.Id), urgentLog.UrgentEndTime);
+
+          // Simpan JobId ke UrgentLog
+          urgentLog.HangfireJobId = jobId;
+          await _context.SaveChangesAsync();
+
+          _logger.LogInformation("Scheduled Hangfire job with ID {JobId} for crane {CraneId} to change status to Available at {EndTime}",
+              jobId, existingCrane.Id, urgentLog.UrgentEndTime);
         }
         else
         {
           throw new ArgumentException("UrgentLog data is required when changing status to Maintenance");
+        }
+      }
+      // Jika status crane diubah dari Maintenance ke Available secara manual
+      else if (updateDto.Crane.Status.HasValue &&
+               existingCrane.Status == CraneStatus.Maintenance &&
+               updateDto.Crane.Status == CraneStatus.Available)
+      {
+        existingCrane.Status = CraneStatus.Available;
+
+        // Jika ada UrgentLog aktif, update ActualUrgentEndTime
+        var latestUrgentLog = existingCrane.UrgentLogs.FirstOrDefault();
+        if (latestUrgentLog != null && latestUrgentLog.ActualUrgentEndTime == null)
+        {
+          latestUrgentLog.ActualUrgentEndTime = DateTime.UtcNow;
+
+          // Batalkan scheduled job jika ada JobId
+          if (!string.IsNullOrEmpty(latestUrgentLog.HangfireJobId))
+          {
+            try
+            {
+              BackgroundJob.Delete(latestUrgentLog.HangfireJobId);
+              _logger.LogInformation("Cancelled Hangfire job {JobId} for crane {CraneId}",
+                  latestUrgentLog.HangfireJobId, existingCrane.Id);
+            }
+            catch (Exception ex)
+            {
+              _logger.LogWarning(ex, "Failed to delete Hangfire job {JobId} for crane {CraneId}",
+                  latestUrgentLog.HangfireJobId, existingCrane.Id);
+            }
+
+            // Clear job ID
+            latestUrgentLog.HangfireJobId = null;
+          }
         }
       }
       else
@@ -180,9 +230,10 @@ namespace AspnetCoreMvcFull.Services
         {
           existingCrane.Status = updateDto.Crane.Status.Value;
         }
-        _context.Entry(existingCrane).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
       }
+
+      _context.Entry(existingCrane).State = EntityState.Modified;
+      await _context.SaveChangesAsync();
     }
 
     public async Task DeleteCraneAsync(int id)
@@ -195,19 +246,55 @@ namespace AspnetCoreMvcFull.Services
 
       // Hapus semua UrgentLogs terkait
       var relatedLogs = await _context.UrgentLogs.Where(ul => ul.CraneId == id).ToListAsync();
-      _context.UrgentLogs.RemoveRange(relatedLogs);
 
+      // Batalkan semua job Hangfire terkait
+      foreach (var log in relatedLogs.Where(l => !string.IsNullOrEmpty(l.HangfireJobId)))
+      {
+        try
+        {
+          BackgroundJob.Delete(log.HangfireJobId);
+          _logger.LogInformation("Deleted Hangfire job {JobId} for crane {CraneId}", log.HangfireJobId, id);
+        }
+        catch (Exception ex)
+        {
+          _logger.LogWarning(ex, "Failed to delete Hangfire job {JobId}", log.HangfireJobId);
+        }
+      }
+
+      _context.UrgentLogs.RemoveRange(relatedLogs);
       _context.Cranes.Remove(crane);
       await _context.SaveChangesAsync();
     }
 
     public async Task ChangeCraneStatusToAvailableAsync(int craneId)
     {
-      var crane = await _context.Cranes.FindAsync(craneId);
+      _logger.LogInformation("Executing scheduled job to change crane {CraneId} status to Available", craneId);
+
+      var crane = await _context.Cranes
+          .Include(c => c.UrgentLogs.OrderByDescending(u => u.UrgentStartTime).Take(1))
+          .FirstOrDefaultAsync(c => c.Id == craneId);
+
       if (crane != null && crane.Status == CraneStatus.Maintenance)
       {
-        crane.Status = CraneStatus.Available;
-        await _context.SaveChangesAsync();
+        var latestLog = crane.UrgentLogs.FirstOrDefault();
+
+        // Jika masih belum ditandai manual selesai
+        if (latestLog != null && latestLog.ActualUrgentEndTime == null)
+        {
+          crane.Status = CraneStatus.Available;
+          latestLog.ActualUrgentEndTime = DateTime.UtcNow;
+
+          await _context.SaveChangesAsync();
+          _logger.LogInformation("Crane {CraneId} status automatically changed to Available via Hangfire job", craneId);
+        }
+        else
+        {
+          _logger.LogInformation("Crane {CraneId} already has ActualUrgentEndTime set, no action needed", craneId);
+        }
+      }
+      else
+      {
+        _logger.LogInformation("Crane {CraneId} is not in Maintenance status or does not exist, no action needed", craneId);
       }
     }
 

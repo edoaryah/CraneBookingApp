@@ -138,6 +138,71 @@ function renderCraneTable() {
 }
 
 // Fetch maintenance info for a crane
+// async function fetchMaintenanceInfo(craneId) {
+//   try {
+//     const response = await fetch(`/api/Cranes/${craneId}`);
+
+//     if (!response.ok) {
+//       throw new Error('Failed to fetch crane details');
+//     }
+
+//     const craneDetail = await response.json();
+//     const maintenanceInfoCell = document.getElementById(`maintenance-info-${craneId}`);
+
+//     if (!maintenanceInfoCell) return;
+
+//     // If there are urgent logs
+//     if (craneDetail.urgentLogs && craneDetail.urgentLogs.length > 0) {
+//       const latestLog = craneDetail.urgentLogs[0]; // Assuming logs are ordered by date
+
+//       // Format dates
+//       const startDate = new Date(latestLog.urgentStartTime);
+//       const estimatedEndDate = new Date(latestLog.urgentEndTime);
+//       const actualEndDate = latestLog.actualUrgentEndTime ? new Date(latestLog.actualUrgentEndTime) : null;
+
+//       const startFormatted = formatDate(startDate);
+//       const endFormatted = formatDate(estimatedEndDate);
+
+//       // Calculate remaining time or show actual end time
+//       let timeInfo = '';
+
+//       if (actualEndDate) {
+//         // Show actual end time if exists
+//         const actualEndFormatted = formatDate(actualEndDate);
+//         timeInfo = `<div class="maintenance-timer text-success">Actual End: ${actualEndFormatted}</div>`;
+//       } else {
+//         // Calculate remaining time
+//         const now = new Date();
+//         if (estimatedEndDate > now) {
+//           const remainingMs = estimatedEndDate - now;
+//           const remainingDays = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+//           const remainingHours = Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+//           timeInfo = `<div class="maintenance-timer">Remaining: ${remainingDays}d ${remainingHours}h</div>`;
+//         } else {
+//           timeInfo = `<div class="maintenance-timer text-warning">Estimated time elapsed</div>`;
+//         }
+//       }
+
+//       maintenanceInfoCell.innerHTML = `
+//         <div>${startFormatted} - ${endFormatted}</div>
+//         ${timeInfo}
+//         <div class="text-truncate" title="${latestLog.reasons}" style="max-width: 200px;">
+//           ${latestLog.reasons}
+//         </div>
+//       `;
+//     } else {
+//       maintenanceInfoCell.innerHTML = `<span class="text-muted">No maintenance logs</span>`;
+//     }
+//   } catch (error) {
+//     console.error('Error fetching maintenance info:', error);
+//     const maintenanceInfoCell = document.getElementById(`maintenance-info-${craneId}`);
+//     if (maintenanceInfoCell) {
+//       maintenanceInfoCell.innerHTML = `<span class="text-danger">Error loading info</span>`;
+//     }
+//   }
+// }
+// Fetch maintenance info for a crane
 async function fetchMaintenanceInfo(craneId) {
   try {
     const response = await fetch(`/api/Cranes/${craneId}`);
@@ -157,27 +222,37 @@ async function fetchMaintenanceInfo(craneId) {
 
       // Format dates
       const startDate = new Date(latestLog.urgentStartTime);
-      const endDate = new Date(latestLog.urgentEndTime);
+      const estimatedEndDate = new Date(latestLog.urgentEndTime);
+      const actualEndDate = latestLog.actualUrgentEndTime ? new Date(latestLog.actualUrgentEndTime) : null;
+
       const startFormatted = formatDate(startDate);
-      const endFormatted = formatDate(endDate);
+      const endFormatted = formatDate(estimatedEndDate);
 
-      // Calculate remaining time
-      const now = new Date();
-      let remainingText = '';
+      // Calculate remaining time or show actual end time
+      let timeInfo = '';
 
-      if (endDate > now) {
-        const remainingMs = endDate - now;
-        const remainingDays = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
-        const remainingHours = Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-        remainingText = `<div class="maintenance-timer">Remaining: ${remainingDays}d ${remainingHours}h</div>`;
+      if (actualEndDate) {
+        // Show actual end time if exists
+        const actualEndFormatted = formatDate(actualEndDate);
+        timeInfo = `<div class="maintenance-timer text-success">Actual End: ${actualEndFormatted}</div>`;
       } else {
-        remainingText = `<div class="maintenance-timer text-success">Maintenance period ended</div>`;
+        // Calculate remaining time
+        const now = new Date();
+        if (estimatedEndDate > now) {
+          const remainingMs = estimatedEndDate - now;
+          const remainingDays = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+          const remainingHours = Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const remainingMinutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+
+          timeInfo = `<div class="maintenance-timer">Remaining: ${remainingDays}d ${remainingHours}h ${remainingMinutes}m</div>`;
+        } else {
+          timeInfo = `<div class="maintenance-timer text-warning">Estimated time elapsed</div>`;
+        }
       }
 
       maintenanceInfoCell.innerHTML = `
         <div>${startFormatted} - ${endFormatted}</div>
-        ${remainingText}
+        ${timeInfo}
         <div class="text-truncate" title="${latestLog.reasons}" style="max-width: 200px;">
           ${latestLog.reasons}
         </div>
@@ -287,6 +362,7 @@ async function openMaintenanceLogModal(craneId, craneCode) {
     }
 
     const logs = await response.json();
+    console.log('Maintenance logs received:', logs); // Debug log
 
     document.getElementById('maintenanceLogLoading').style.display = 'none';
 
@@ -301,14 +377,35 @@ async function openMaintenanceLogModal(craneId, craneCode) {
     logs.forEach(log => {
       const startDate = new Date(log.urgentStartTime);
       const endDate = new Date(log.urgentEndTime);
+      const actualEndDate = log.actualUrgentEndTime ? new Date(log.actualUrgentEndTime) : null;
 
       const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${formatDateTime(startDate)}</td>
-        <td>${formatDateTime(endDate)}</td>
-        <td>${log.estimatedUrgentDays} days, ${log.estimatedUrgentHours} hours</td>
-        <td>${log.reasons}</td>
-      `;
+
+      // Buat masing-masing sel secara individual untuk memastikan urutan yang benar
+      // Sel 1: Start Date
+      const startDateCell = document.createElement('td');
+      startDateCell.textContent = formatDateTime(startDate);
+      row.appendChild(startDateCell);
+
+      // Sel 2: Estimated End Date
+      const endDateCell = document.createElement('td');
+      endDateCell.textContent = formatDateTime(endDate);
+      row.appendChild(endDateCell);
+
+      // Sel 3: Duration
+      const durationCell = document.createElement('td');
+      durationCell.textContent = `${log.estimatedUrgentDays} days, ${log.estimatedUrgentHours} hours`;
+      row.appendChild(durationCell);
+
+      // Sel 4: Actual End Date
+      const actualEndDateCell = document.createElement('td');
+      actualEndDateCell.textContent = actualEndDate ? formatDateTime(actualEndDate) : 'N/A';
+      row.appendChild(actualEndDateCell);
+
+      // Sel 5: Reasons
+      const reasonsCell = document.createElement('td');
+      reasonsCell.textContent = log.reasons || 'No reason provided';
+      row.appendChild(reasonsCell);
 
       tableBody.appendChild(row);
     });

@@ -61,17 +61,23 @@
       <div class="card-body">
         <form id="craneBookingForm">
 
+          <!-- Hidden fields for user data -->
+          <input type="hidden" id="userName" value="@ViewData["UserName"]" />
+          <input type="hidden" id="userDepartment" value="@ViewData["UserDepartment"]" />
+
           <!-- Requestor Information Section -->
           <div class="form-section">
             <h6 class="form-section-title">Requestor Information</h6>
             <div class="row mb-3">
               <div class="col-md-6 mb-3">
                 <label class="form-label required-label">Requestor Name</label>
-                <input id="name" name="name" class="form-control" required />
+                <input id="name" name="name" class="form-control" required readonly />
+                <small class="text-muted">Automatically filled based on your login information</small>
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label required-label">Department Name</label>
-                <input id="department" name="department" class="form-control" required />
+                <input id="department" name="department" class="form-control" required readonly />
+                <small class="text-muted">Automatically filled based on your login information</small>
               </div>
             </div>
 
@@ -194,7 +200,23 @@
                 <div class="form-check">
                   <input id="termsAgreement" class="form-check-input" type="checkbox" required />
                   <label class="form-check-label required-label">
-                    I agree to the terms and conditions
+                    Pengguna harus menyiapkan akses yang aman ke area kerja dan tempat kerja yang aman. Untuk bekerja
+                    pada malam hari, pengguna harus menyediakan penerangan yang cukup memadahi.
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input id="termsAgreement" class="form-check-input" type="checkbox" required />
+                  <label class="form-check-label required-label">
+                    Penguna harus melengkapi izin yang sudah disetujui. Misalnya izin bekerja di dekat saluran listrik,
+                    Akses PIT dll dan pengguna harus memandu bila diperlukan untuk ke lokasi pekerjaan dan
+                    membantu mengawasi pekerjaan yang sedang berlangsung dan juga pengguna harus menginformasikan secara
+                    tertulis jika ada perubahan akses atau jalur yang akan dilalui.
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input id="termsAgreement" class="form-check-input" type="checkbox" required />
+                  <label class="form-check-label required-label">
+                    Hanya pekerjaan yang sesuai denga persyaratan yang akan diproses.
                   </label>
                 </div>
               </div>

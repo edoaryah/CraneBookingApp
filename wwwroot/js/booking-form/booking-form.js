@@ -23,6 +23,10 @@ endDateInput.value = '';
 
 // Load data on page load
 document.addEventListener('DOMContentLoaded', async function () {
+
+  // Set user data from ViewData
+  setUserData();
+
   await loadCranes();
   await loadHazards();
   initLiftedItemsTable();
@@ -30,6 +34,17 @@ document.addEventListener('DOMContentLoaded', async function () {
   // Add event listener for the add item button
   addItemBtn.addEventListener('click', addLiftedItemRow);
 });
+
+// Set user data from ViewData
+function setUserData() {
+  // Get values from hidden inputs
+  const userName = document.getElementById('userName')?.value || '';
+  const userDepartment = document.getElementById('userDepartment')?.value || '';
+
+  // Set values to form fields
+  document.getElementById('name').value = userName;
+  document.getElementById('department').value = userDepartment;
+}
 
 // Fetch cranes from API
 async function loadCranes() {
