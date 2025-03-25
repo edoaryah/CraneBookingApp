@@ -49,10 +49,22 @@
         <div class="text-truncate" data-i18n="Cards">Bookings</div>
       </a>
     </li>
+    <li class='menu-item@(currentPage == "/BookingHistory" ? " active" : "")'>
+      <a asp-controller="BookingHistory" asp-action="Index" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-history"></i>
+        <div class="text-truncate" data-i18n="Cards">Booking History</div>
+      </a>
+    </li>
 
     <!-- Management -->
     <li class="menu-header small text-uppercase"><span class="menu-header-text">Management</span></li>
     <!-- Forms -->
+    <li class='menu-item@(currentPage == "/CraneManagement" ? " active" : "")'>
+      <a asp-controller="CraneManagement" asp-action="Index" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-cube"></i>
+        <div class="text-truncate" data-i18n="Crane">Crane</div>
+      </a>
+    </li>
     <li class='menu-item@(currentPage.StartsWith("/Forms") ? " active open" : "")'>
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-detail"></i>
