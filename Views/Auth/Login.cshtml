@@ -1,4 +1,4 @@
-@model AspnetCoreMvcFull.DTOs.LoginRequest
+@* @model AspnetCoreMvcFull.DTOs.LoginRequest
 @{
   Layout = "_BlankLayout";
   ViewData["Title"] = "Login - Crane Booking System";
@@ -66,6 +66,72 @@
         </div>
       </div>
       <!-- /Login -->
+    </div>
+  </div>
+</div> *@
+
+@model AspnetCoreMvcFull.DTOs.LoginRequest
+@{
+  Layout = "_BlankLayout";
+  ViewData["Title"] = "Login - Crane Booking System";
+}
+
+@section PageStyles {
+  <link rel="stylesheet" href="~/vendor/css/pages/page-auth.css">
+}
+
+<div class="container-xxl">
+  <div class="authentication-wrapper authentication-basic container-p-y">
+    <div class="card-login">
+      <!-- Crane Image (Left Side) -->
+      <div class="login-image-side">
+        <img src="~/img/crane.jpg" alt="Crane Booking System">
+      </div>
+
+      <!-- Login Form (Right Side) -->
+      <div class="login-form-side">
+        <!-- /Logo -->
+        <h4 class="mb-1">Welcome to Crane Booking System! 👋</h4>
+        <p class="mb-4">Please sign-in to your account</p>
+
+        <form id="formAuthentication" class="mb-3" asp-controller="Auth" asp-action="Login" method="POST">
+          @Html.AntiForgeryToken()
+          <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+          <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
+          <div class="mb-3">
+            <label asp-for="Username" class="form-label">LDAP Username</label>
+            <input type="text" class="form-control" asp-for="Username" placeholder="Enter your LDAP username" autofocus>
+            <span asp-validation-for="Username" class="text-danger"></span>
+          </div>
+
+          <div class="mb-3 form-password-toggle">
+            <label asp-for="Password" class="form-label">Password</label>
+            <div class="input-group input-group-merge">
+              <input type="password" asp-for="Password" class="form-control"
+                placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
+                aria-describedby="password" />
+              <span class="input-group-text cursor-pointer"><i class="bx bx-hide"></i></span>
+            </div>
+            <span asp-validation-for="Password" class="text-danger"></span>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="RememberMe" id="remember-me">
+                <label class="form-check-label" for="remember-me">
+                  Remember Me
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <button class="btn btn-primary d-grid w-100" type="submit">Login</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </div>
