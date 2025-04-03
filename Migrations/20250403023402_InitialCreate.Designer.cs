@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AspnetCoreMvcFull.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250321121458_InitialCreate")]
+    [Migration("20250403023402_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -57,7 +57,7 @@ namespace AspnetCoreMvcFull.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Location")
                         .HasMaxLength(200)
@@ -76,10 +76,10 @@ namespace AspnetCoreMvcFull.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("SubmitTime")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -155,17 +155,26 @@ namespace AspnetCoreMvcFull.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
-                    b.Property<bool>("IsDayShift")
-                        .HasColumnType("boolean");
+                    b.Property<int>("ShiftDefinitionId")
+                        .HasColumnType("integer");
 
-                    b.Property<bool>("IsNightShift")
-                        .HasColumnType("boolean");
+                    b.Property<TimeSpan>("ShiftEndTime")
+                        .HasColumnType("interval");
+
+                    b.Property<string>("ShiftName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<TimeSpan>("ShiftStartTime")
+                        .HasColumnType("interval");
 
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId");
+
+                    b.HasIndex("ShiftDefinitionId");
 
                     b.ToTable("BookingShifts");
                 });
@@ -192,6 +201,50 @@ namespace AspnetCoreMvcFull.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Cranes");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Capacity = 250,
+                            Code = "LC008",
+                            Status = "Available"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Capacity = 150,
+                            Code = "LC009",
+                            Status = "Available"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Capacity = 100,
+                            Code = "LC010",
+                            Status = "Available"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Capacity = 150,
+                            Code = "LC011",
+                            Status = "Available"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Capacity = 35,
+                            Code = "LC012",
+                            Status = "Available"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Capacity = 15,
+                            Code = "LC013",
+                            Status = "Available"
+                        });
                 });
 
             modelBuilder.Entity("AspnetCoreMvcFull.Models.Hazard", b =>
@@ -239,6 +292,75 @@ namespace AspnetCoreMvcFull.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.ShiftDefinition", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("interval");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("interval");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ShiftDefinitions");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Category = "Day Shift",
+                            EndTime = new TimeSpan(0, 12, 0, 0, 0),
+                            IsActive = true,
+                            Name = "Pagi (06:00-12:00)",
+                            StartTime = new TimeSpan(0, 6, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Category = "Day Shift",
+                            EndTime = new TimeSpan(0, 18, 0, 0, 0),
+                            IsActive = true,
+                            Name = "Siang (12:00-18:00)",
+                            StartTime = new TimeSpan(0, 12, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Category = "Night Shift",
+                            EndTime = new TimeSpan(0, 0, 0, 0, 0),
+                            IsActive = true,
+                            Name = "Sore (18:00-00:00)",
+                            StartTime = new TimeSpan(0, 18, 0, 0, 0)
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Category = "Night Shift",
+                            EndTime = new TimeSpan(0, 6, 0, 0, 0),
+                            IsActive = true,
+                            Name = "Malam (00:00-06:00)",
+                            StartTime = new TimeSpan(0, 0, 0, 0, 0)
+                        });
+                });
+
             modelBuilder.Entity("AspnetCoreMvcFull.Models.UrgentLog", b =>
                 {
                     b.Property<int>("Id")
@@ -246,6 +368,9 @@ namespace AspnetCoreMvcFull.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ActualUrgentEndTime")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("CraneId")
                         .HasColumnType("integer");
@@ -256,15 +381,18 @@ namespace AspnetCoreMvcFull.Migrations
                     b.Property<int>("EstimatedUrgentHours")
                         .HasColumnType("integer");
 
+                    b.Property<string>("HangfireJobId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Reasons")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("UrgentEndTime")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("UrgentStartTime")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -295,7 +423,7 @@ namespace AspnetCoreMvcFull.Migrations
                     b.HasOne("AspnetCoreMvcFull.Models.Hazard", "Hazard")
                         .WithMany()
                         .HasForeignKey("HazardId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Booking");
@@ -322,7 +450,15 @@ namespace AspnetCoreMvcFull.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("AspnetCoreMvcFull.Models.ShiftDefinition", "ShiftDefinition")
+                        .WithMany("BookingShifts")
+                        .HasForeignKey("ShiftDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Booking");
+
+                    b.Navigation("ShiftDefinition");
                 });
 
             modelBuilder.Entity("AspnetCoreMvcFull.Models.UrgentLog", b =>
@@ -348,6 +484,11 @@ namespace AspnetCoreMvcFull.Migrations
             modelBuilder.Entity("AspnetCoreMvcFull.Models.Crane", b =>
                 {
                     b.Navigation("UrgentLogs");
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.ShiftDefinition", b =>
+                {
+                    b.Navigation("BookingShifts");
                 });
 #pragma warning restore 612, 618
         }

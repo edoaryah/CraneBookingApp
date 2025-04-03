@@ -42,7 +42,7 @@ namespace AspnetCoreMvcFull.DTOs
 
   public class UrgentLogCreateDto
   {
-    public DateTime UrgentStartTime { get; set; } = DateTime.UtcNow; // Ubah ke UtcNow
+    public DateTime UrgentStartTime { get; set; } = DateTime.Now; // Gunakan waktu lokal
     public int EstimatedUrgentDays { get; set; }
     public int EstimatedUrgentHours { get; set; }
     public required string Reasons { get; set; }

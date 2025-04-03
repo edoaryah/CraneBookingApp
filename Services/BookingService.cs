@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using AspnetCoreMvcFull.Data;
 using AspnetCoreMvcFull.DTOs;
 using AspnetCoreMvcFull.Models;
-using AspnetCoreMvcFull.Helpers;
 
 namespace AspnetCoreMvcFull.Services
 {
@@ -11,13 +10,20 @@ namespace AspnetCoreMvcFull.Services
     private readonly AppDbContext _context;
     private readonly ICraneService _craneService;
     private readonly IHazardService _hazardService;
+    private readonly IShiftDefinitionService _shiftDefinitionService;
     private readonly ILogger<BookingService> _logger;
 
-    public BookingService(AppDbContext context, ICraneService craneService, IHazardService hazardService, ILogger<BookingService> logger)
+    public BookingService(
+        AppDbContext context,
+        ICraneService craneService,
+        IHazardService hazardService,
+        IShiftDefinitionService shiftDefinitionService,
+        ILogger<BookingService> logger)
     {
       _context = context;
       _craneService = craneService;
       _hazardService = hazardService;
+      _shiftDefinitionService = shiftDefinitionService;
       _logger = logger;
     }
 
@@ -36,10 +42,9 @@ namespace AspnetCoreMvcFull.Services
         Department = r.Department,
         CraneId = r.CraneId,
         CraneCode = r.Crane?.Code,
-        StartDate = TimeZoneHelper.UtcToWita(r.StartDate),
-        EndDate = TimeZoneHelper.UtcToWita(r.EndDate),
-        SubmitTime = TimeZoneHelper.UtcToWita(r.SubmitTime),
-        // Tambahkan field baru
+        StartDate = r.StartDate,
+        EndDate = r.EndDate,
+        SubmitTime = r.SubmitTime,
         Location = r.Location,
         ProjectSupervisor = r.ProjectSupervisor,
         CostCode = r.CostCode,
@@ -53,6 +58,7 @@ namespace AspnetCoreMvcFull.Services
       var booking = await _context.Bookings
           .Include(r => r.Crane)
           .Include(r => r.BookingShifts)
+            .ThenInclude(bs => bs.ShiftDefinition)
           .Include(r => r.BookingItems)
           .Include(r => r.BookingHazards)
             .ThenInclude(bh => bh.Hazard)
@@ -71,9 +77,9 @@ namespace AspnetCoreMvcFull.Services
         Department = booking.Department,
         CraneId = booking.CraneId,
         CraneCode = booking.Crane?.Code,
-        StartDate = TimeZoneHelper.UtcToWita(booking.StartDate),
-        EndDate = TimeZoneHelper.UtcToWita(booking.EndDate),
-        SubmitTime = TimeZoneHelper.UtcToWita(booking.SubmitTime),
+        StartDate = booking.StartDate,
+        EndDate = booking.EndDate,
+        SubmitTime = booking.SubmitTime,
         Location = booking.Location,
         ProjectSupervisor = booking.ProjectSupervisor,
         CostCode = booking.CostCode,
@@ -82,9 +88,11 @@ namespace AspnetCoreMvcFull.Services
         Shifts = booking.BookingShifts.Select(s => new BookingShiftDto
         {
           Id = s.Id,
-          Date = TimeZoneHelper.UtcToWita(s.Date),
-          IsDayShift = s.IsDayShift,
-          IsNightShift = s.IsNightShift
+          Date = s.Date,
+          ShiftDefinitionId = s.ShiftDefinitionId,
+          ShiftName = s.ShiftName ?? s.ShiftDefinition?.Name,
+          StartTime = s.ShiftStartTime != default ? s.ShiftStartTime : s.ShiftDefinition?.StartTime,
+          EndTime = s.ShiftEndTime != default ? s.ShiftEndTime : s.ShiftDefinition?.EndTime
         }).ToList(),
         Items = booking.BookingItems.Select(i => new BookingItemDto
         {
@@ -126,9 +134,9 @@ namespace AspnetCoreMvcFull.Services
         Department = r.Department,
         CraneId = r.CraneId,
         CraneCode = r.Crane?.Code,
-        StartDate = TimeZoneHelper.UtcToWita(r.StartDate),
-        EndDate = TimeZoneHelper.UtcToWita(r.EndDate),
-        SubmitTime = TimeZoneHelper.UtcToWita(r.SubmitTime),
+        StartDate = r.StartDate,
+        EndDate = r.EndDate,
+        SubmitTime = r.SubmitTime,
         Location = r.Location,
         ProjectSupervisor = r.ProjectSupervisor,
         CostCode = r.CostCode,
@@ -139,9 +147,9 @@ namespace AspnetCoreMvcFull.Services
 
     public async Task<CalendarResponseDto> GetCalendarViewAsync(DateTime startDate, DateTime endDate)
     {
-      // Konversi input dates dari WITA ke UTC
-      var startDateUtc = TimeZoneHelper.WitaToUtc(startDate.Date);
-      var endDateUtc = TimeZoneHelper.WitaToUtc(endDate.Date);
+      // Gunakan langsung date tanpa konversi ke UTC
+      var startDateLocal = startDate.Date;
+      var endDateLocal = endDate.Date;
 
       // Ambil semua crane
       var cranes = await _context.Cranes.ToListAsync();
@@ -151,8 +159,8 @@ namespace AspnetCoreMvcFull.Services
       {
         WeekRange = new WeekRangeDto
         {
-          StartDate = TimeZoneHelper.UtcToWita(startDateUtc).ToString("yyyy-MM-dd"),
-          EndDate = TimeZoneHelper.UtcToWita(endDateUtc).ToString("yyyy-MM-dd")
+          StartDate = startDateLocal.ToString("yyyy-MM-dd"),
+          EndDate = endDateLocal.ToString("yyyy-MM-dd")
         },
         Cranes = new List<CraneBookingsDto>()
       };
@@ -161,7 +169,8 @@ namespace AspnetCoreMvcFull.Services
       var bookingShifts = await _context.BookingShifts
           .Include(bs => bs.Booking)
           .ThenInclude(b => b!.Crane)
-          .Where(bs => bs.Date >= startDateUtc && bs.Date <= endDateUtc)
+          .Include(bs => bs.ShiftDefinition)
+          .Where(bs => bs.Date >= startDateLocal && bs.Date <= endDateLocal)
           .ToListAsync();
 
       // Kelompokkan berdasarkan crane
@@ -174,23 +183,33 @@ namespace AspnetCoreMvcFull.Services
           Bookings = new List<BookingCalendarDto>()
         };
 
-        // Cari booking untuk crane ini
-        var craneshifts = bookingShifts
+        // Group shifts by date and booking
+        var craneShifts = bookingShifts
             .Where(bs => bs.Booking!.CraneId == crane.Id)
+            .GroupBy(bs => new { bs.Date, bs.BookingId })
             .ToList();
 
-        // Tambahkan booking ke list
-        foreach (var shift in craneshifts)
+        foreach (var group in craneShifts)
         {
-          craneDto.Bookings.Add(new BookingCalendarDto
+          // Get first shift to access booking info
+          var firstShift = group.First();
+
+          var calendarBooking = new BookingCalendarDto
           {
-            Id = shift.BookingId,
-            BookingNumber = shift.Booking!.BookingNumber,
-            Department = shift.Booking.Department,
-            Date = TimeZoneHelper.UtcToWita(shift.Date),
-            IsDayShift = shift.IsDayShift,
-            IsNightShift = shift.IsNightShift
-          });
+            Id = firstShift.BookingId,
+            BookingNumber = firstShift.Booking!.BookingNumber,
+            Department = firstShift.Booking.Department,
+            Date = group.Key.Date,
+            Shifts = group.Select(s => new ShiftBookingDto
+            {
+              ShiftDefinitionId = s.ShiftDefinitionId,
+              ShiftName = s.ShiftName ?? s.ShiftDefinition?.Name,
+              StartTime = s.ShiftStartTime != default ? s.ShiftStartTime : s.ShiftDefinition?.StartTime ?? TimeSpan.Zero,
+              EndTime = s.ShiftEndTime != default ? s.ShiftEndTime : s.ShiftDefinition?.EndTime ?? TimeSpan.Zero
+            }).ToList()
+          };
+
+          craneDto.Bookings.Add(calendarBooking);
         }
 
         response.Cranes.Add(craneDto);
@@ -218,12 +237,12 @@ namespace AspnetCoreMvcFull.Services
           throw new InvalidOperationException($"Cannot reserve crane with ID {bookingDto.CraneId} because it is currently under maintenance");
         }
 
-        // Konversi input dates dari WITA ke UTC
-        var startDateUtc = TimeZoneHelper.WitaToUtc(bookingDto.StartDate.Date);
-        var endDateUtc = TimeZoneHelper.WitaToUtc(bookingDto.EndDate.Date);
+        // Gunakan tanggal lokal tanpa konversi UTC
+        var startDate = bookingDto.StartDate.Date;
+        var endDate = bookingDto.EndDate.Date;
 
         // Validate date range
-        if (startDateUtc > endDateUtc)
+        if (startDate > endDate)
         {
           throw new ArgumentException("Start date must be before or equal to end date");
         }
@@ -235,12 +254,12 @@ namespace AspnetCoreMvcFull.Services
         }
 
         // Check if all dates in the range have shift selections
-        var dateRange = Enumerable.Range(0, (endDateUtc - startDateUtc).Days + 1)
-            .Select(d => startDateUtc.AddDays(d))
+        var dateRange = Enumerable.Range(0, (endDate - startDate).Days + 1)
+            .Select(d => startDate.AddDays(d))
             .ToList();
 
         var selectedDates = bookingDto.ShiftSelections
-            .Select(s => TimeZoneHelper.WitaToUtc(s.Date.Date))
+            .Select(s => s.Date.Date)
             .ToList();
 
         if (!dateRange.All(d => selectedDates.Contains(d)))
@@ -251,24 +270,34 @@ namespace AspnetCoreMvcFull.Services
         // Validate each shift selection has at least one shift selected
         foreach (var selection in bookingDto.ShiftSelections)
         {
-          if (!selection.IsDayShift && !selection.IsNightShift)
+          if (selection.SelectedShiftIds == null || !selection.SelectedShiftIds.Any())
           {
-            throw new ArgumentException($"At least one shift must be selected for date {TimeZoneHelper.UtcToWita(TimeZoneHelper.WitaToUtc(selection.Date)).ToShortDateString()}");
+            throw new ArgumentException($"At least one shift must be selected for date {selection.Date.ToShortDateString()}");
           }
 
-          // Konversi ke UTC untuk pengecekan konflik
-          var dateUtc = TimeZoneHelper.WitaToUtc(selection.Date.Date);
+          // Gunakan tanggal lokal untuk pengecekan konflik
+          var dateLocal = selection.Date.Date;
 
-          // Check for scheduling conflicts
-          bool hasConflict = await IsBookingConflictAsync(
-              bookingDto.CraneId,
-              dateUtc,
-              selection.IsDayShift,
-              selection.IsNightShift);
-
-          if (hasConflict)
+          // Check for scheduling conflicts for each selected shift
+          foreach (var shiftId in selection.SelectedShiftIds)
           {
-            throw new InvalidOperationException($"Scheduling conflict detected for date {TimeZoneHelper.UtcToWita(dateUtc).ToShortDateString()}");
+            // Verify the shift definition exists
+            if (!await _shiftDefinitionService.ShiftDefinitionExistsAsync(shiftId))
+            {
+              throw new KeyNotFoundException($"Shift definition with ID {shiftId} not found");
+            }
+
+            bool hasConflict = await IsShiftBookingConflictAsync(
+                bookingDto.CraneId,
+                dateLocal,
+                shiftId);
+
+            if (hasConflict)
+            {
+              // Get shift name for better error message
+              var shift = await _context.ShiftDefinitions.FindAsync(shiftId);
+              throw new InvalidOperationException($"Scheduling conflict detected for date {dateLocal.ToShortDateString()} and shift {shift?.Name ?? shiftId.ToString()}");
+            }
           }
         }
 
@@ -279,10 +308,9 @@ namespace AspnetCoreMvcFull.Services
           Name = bookingDto.Name,
           Department = bookingDto.Department,
           CraneId = bookingDto.CraneId,
-          StartDate = startDateUtc,
-          EndDate = endDateUtc,
-          SubmitTime = DateTime.UtcNow,
-          // Tambahkan field baru
+          StartDate = startDate,
+          EndDate = endDate,
+          SubmitTime = DateTime.Now,
           Location = bookingDto.Location,
           ProjectSupervisor = bookingDto.ProjectSupervisor,
           CostCode = bookingDto.CostCode,
@@ -298,22 +326,36 @@ namespace AspnetCoreMvcFull.Services
         booking.BookingNumber = $"C{booking.Id:D4}";
         await _context.SaveChangesAsync();
 
-        // Create shift selections
+        // Create shift selections with historical data
         foreach (var selection in bookingDto.ShiftSelections)
         {
-          var dateUtc = TimeZoneHelper.WitaToUtc(selection.Date.Date);
-          var shift = new BookingShift
-          {
-            BookingId = booking.Id,
-            Date = dateUtc,
-            IsDayShift = selection.IsDayShift,
-            IsNightShift = selection.IsNightShift
-          };
+          var dateLocal = selection.Date.Date;
 
-          _context.BookingShifts.Add(shift);
+          foreach (var shiftId in selection.SelectedShiftIds)
+          {
+            // Dapatkan informasi shift saat ini
+            var shiftDefinition = await _context.ShiftDefinitions.FindAsync(shiftId);
+            if (shiftDefinition == null)
+            {
+              throw new KeyNotFoundException($"Shift definition with ID {shiftId} not found");
+            }
+
+            var bookingShift = new BookingShift
+            {
+              BookingId = booking.Id,
+              Date = dateLocal,
+              ShiftDefinitionId = shiftId,
+              // Simpan juga data historis shift
+              ShiftName = shiftDefinition.Name,
+              ShiftStartTime = shiftDefinition.StartTime,
+              ShiftEndTime = shiftDefinition.EndTime
+            };
+
+            _context.BookingShifts.Add(bookingShift);
+          }
         }
 
-        // Add this section to create booking items
+        // Add booking items
         if (bookingDto.Items != null && bookingDto.Items.Any())
         {
           foreach (var itemDto in bookingDto.Items)
@@ -363,225 +405,259 @@ namespace AspnetCoreMvcFull.Services
 
     public async Task<BookingDetailDto> UpdateBookingAsync(int id, BookingUpdateDto bookingDto)
     {
-      var booking = await _context.Bookings
-          .Include(r => r.BookingShifts)
-          .Include(r => r.BookingItems) // Add this line to include items
-          .Include(r => r.BookingHazards)
-          .FirstOrDefaultAsync(r => r.Id == id);
-
-      if (booking == null)
+      try
       {
-        throw new KeyNotFoundException($"Booking with ID {id} not found");
-      }
+        _logger.LogInformation("Updating booking ID: {Id}", id);
 
-      // Validate crane exists if changing crane
-      if (booking.CraneId != bookingDto.CraneId &&
-          !await _craneService.CraneExistsAsync(bookingDto.CraneId))
-      {
-        throw new KeyNotFoundException($"Crane with ID {bookingDto.CraneId} not found");
-      }
+        var booking = await _context.Bookings
+            .Include(r => r.BookingShifts)
+            .Include(r => r.BookingItems)
+            .Include(r => r.BookingHazards)
+            .FirstOrDefaultAsync(r => r.Id == id);
 
-      // Validate crane is available if changing crane
-      if (booking.CraneId != bookingDto.CraneId)
-      {
-        var crane = await _context.Cranes.FindAsync(bookingDto.CraneId);
-        if (crane?.Status == CraneStatus.Maintenance)
+        if (booking == null)
         {
-          throw new InvalidOperationException($"Cannot reserve crane with ID {bookingDto.CraneId} because it is currently under maintenance");
-        }
-      }
-
-      // Konversi dates dari WITA ke UTC
-      var startDateUtc = TimeZoneHelper.WitaToUtc(bookingDto.StartDate.Date);
-      var endDateUtc = TimeZoneHelper.WitaToUtc(bookingDto.EndDate.Date);
-
-      // Validate date range
-      if (startDateUtc > endDateUtc)
-      {
-        throw new ArgumentException("Start date must be before or equal to end date");
-      }
-
-      // Validate shift selections
-      if (bookingDto.ShiftSelections == null || !bookingDto.ShiftSelections.Any())
-      {
-        throw new ArgumentException("At least one shift selection is required");
-      }
-
-      // Check if all dates in the range have shift selections
-      var dateRange = Enumerable.Range(0, (endDateUtc - startDateUtc).Days + 1)
-          .Select(d => startDateUtc.AddDays(d))
-          .ToList();
-
-      var selectedDates = bookingDto.ShiftSelections
-          .Select(s => TimeZoneHelper.WitaToUtc(s.Date.Date))
-          .ToList();
-
-      if (!dateRange.All(d => selectedDates.Contains(d)))
-      {
-        throw new ArgumentException("All dates in the range must have shift selections");
-      }
-
-      // Validate each shift selection has at least one shift selected
-      foreach (var selection in bookingDto.ShiftSelections)
-      {
-        if (!selection.IsDayShift && !selection.IsNightShift)
-        {
-          throw new ArgumentException($"At least one shift must be selected for date {TimeZoneHelper.UtcToWita(TimeZoneHelper.WitaToUtc(selection.Date)).ToShortDateString()}");
+          throw new KeyNotFoundException($"Booking with ID {id} not found");
         }
 
-        // Konversi ke UTC untuk pengecekan konflik
-        var dateUtc = TimeZoneHelper.WitaToUtc(selection.Date.Date);
-
-        // Check for scheduling conflicts (excluding current booking)
-        bool hasConflict = await IsBookingConflictAsync(
-            bookingDto.CraneId,
-            dateUtc,
-            selection.IsDayShift,
-            selection.IsNightShift,
-            id);
-
-        if (hasConflict)
+        // Validate crane exists if changing crane
+        if (booking.CraneId != bookingDto.CraneId &&
+            !await _craneService.CraneExistsAsync(bookingDto.CraneId))
         {
-          throw new InvalidOperationException($"Scheduling conflict detected for date {TimeZoneHelper.UtcToWita(dateUtc).ToShortDateString()}");
+          throw new KeyNotFoundException($"Crane with ID {bookingDto.CraneId} not found");
         }
-      }
 
-      // Update booking
-      booking.Name = bookingDto.Name;
-      booking.Department = bookingDto.Department;
-      booking.CraneId = bookingDto.CraneId;
-      booking.StartDate = startDateUtc;
-      booking.EndDate = endDateUtc;
-      booking.CustomHazard = bookingDto.CustomHazard;
-      // Tambahkan field baru
-      booking.Location = bookingDto.Location;
-      booking.ProjectSupervisor = bookingDto.ProjectSupervisor;
-      booking.CostCode = bookingDto.CostCode;
-      booking.PhoneNumber = bookingDto.PhoneNumber;
-      booking.Description = bookingDto.Description;
-      // SubmitTime is not updated
-
-      // Remove existing shift selections
-      _context.BookingShifts.RemoveRange(booking.BookingShifts);
-
-      // Remove existing hazards
-      _context.BookingHazards.RemoveRange(booking.BookingHazards);
-
-      // Create new shift selections
-      foreach (var selection in bookingDto.ShiftSelections)
-      {
-        var dateUtc = TimeZoneHelper.WitaToUtc(selection.Date.Date);
-        var shift = new BookingShift
+        // Validate crane is available if changing crane
+        if (booking.CraneId != bookingDto.CraneId)
         {
-          BookingId = booking.Id,
-          Date = dateUtc,
-          IsDayShift = selection.IsDayShift,
-          IsNightShift = selection.IsNightShift
-        };
-
-        _context.BookingShifts.Add(shift);
-      }
-
-      // Add this section to handle booking items
-      // Remove existing items
-      _context.BookingItems.RemoveRange(booking.BookingItems);
-
-      // Add new items
-      if (bookingDto.Items != null && bookingDto.Items.Any())
-      {
-        foreach (var itemDto in bookingDto.Items)
-        {
-          var item = new BookingItem
+          var crane = await _context.Cranes.FindAsync(bookingDto.CraneId);
+          if (crane?.Status == CraneStatus.Maintenance)
           {
-            BookingId = booking.Id,
-            ItemName = itemDto.ItemName,
-            Weight = itemDto.Weight,
-            Height = itemDto.Height,
-            Quantity = itemDto.Quantity
-          };
-
-          _context.BookingItems.Add(item);
-        }
-      }
-
-      // Handle predefined hazards
-      if (bookingDto.HazardIds != null && bookingDto.HazardIds.Any())
-      {
-        foreach (var hazardId in bookingDto.HazardIds)
-        {
-          // Validasi hazard exists
-          if (await _hazardService.HazardExistsAsync(hazardId))
-          {
-            var bookingHazard = new BookingHazard
-            {
-              BookingId = booking.Id,
-              HazardId = hazardId
-            };
-            _context.BookingHazards.Add(bookingHazard);
+            throw new InvalidOperationException($"Cannot reserve crane with ID {bookingDto.CraneId} because it is currently under maintenance");
           }
         }
+
+        // Gunakan tanggal lokal tanpa konversi UTC
+        var startDate = bookingDto.StartDate.Date;
+        var endDate = bookingDto.EndDate.Date;
+
+        // Validate date range
+        if (startDate > endDate)
+        {
+          throw new ArgumentException("Start date must be before or equal to end date");
+        }
+
+        // Validate shift selections
+        if (bookingDto.ShiftSelections == null || !bookingDto.ShiftSelections.Any())
+        {
+          throw new ArgumentException("At least one shift selection is required");
+        }
+
+        // Check if all dates in the range have shift selections
+        var dateRange = Enumerable.Range(0, (endDate - startDate).Days + 1)
+            .Select(d => startDate.AddDays(d))
+            .ToList();
+
+        var selectedDates = bookingDto.ShiftSelections
+            .Select(s => s.Date.Date)
+            .ToList();
+
+        if (!dateRange.All(d => selectedDates.Contains(d)))
+        {
+          throw new ArgumentException("All dates in the range must have shift selections");
+        }
+
+        // Validate each shift selection has at least one shift selected
+        foreach (var selection in bookingDto.ShiftSelections)
+        {
+          if (selection.SelectedShiftIds == null || !selection.SelectedShiftIds.Any())
+          {
+            throw new ArgumentException($"At least one shift must be selected for date {selection.Date.ToShortDateString()}");
+          }
+
+          // Gunakan tanggal lokal untuk pengecekan konflik
+          var dateLocal = selection.Date.Date;
+
+          // Check for scheduling conflicts for each selected shift
+          foreach (var shiftId in selection.SelectedShiftIds)
+          {
+            // Verify the shift definition exists
+            if (!await _shiftDefinitionService.ShiftDefinitionExistsAsync(shiftId))
+            {
+              throw new KeyNotFoundException($"Shift definition with ID {shiftId} not found");
+            }
+
+            bool hasConflict = await IsShiftBookingConflictAsync(
+                bookingDto.CraneId,
+                dateLocal,
+                shiftId,
+                id);
+
+            if (hasConflict)
+            {
+              // Get shift name for better error message
+              var shift = await _context.ShiftDefinitions.FindAsync(shiftId);
+              throw new InvalidOperationException($"Scheduling conflict detected for date {dateLocal.ToShortDateString()} and shift {shift?.Name ?? shiftId.ToString()}");
+            }
+          }
+        }
+
+        // Update booking
+        booking.Name = bookingDto.Name;
+        booking.Department = bookingDto.Department;
+        booking.CraneId = bookingDto.CraneId;
+        booking.StartDate = startDate;
+        booking.EndDate = endDate;
+        booking.CustomHazard = bookingDto.CustomHazard;
+        booking.Location = bookingDto.Location;
+        booking.ProjectSupervisor = bookingDto.ProjectSupervisor;
+        booking.CostCode = bookingDto.CostCode;
+        booking.PhoneNumber = bookingDto.PhoneNumber;
+        booking.Description = bookingDto.Description;
+        // SubmitTime is not updated
+
+        // Remove existing shift selections
+        _context.BookingShifts.RemoveRange(booking.BookingShifts);
+
+        // Remove existing hazards
+        _context.BookingHazards.RemoveRange(booking.BookingHazards);
+
+        // Create new shift selections with historical data
+        foreach (var selection in bookingDto.ShiftSelections)
+        {
+          var dateLocal = selection.Date.Date;
+
+          foreach (var shiftId in selection.SelectedShiftIds)
+          {
+            // Dapatkan informasi shift saat ini
+            var shiftDefinition = await _context.ShiftDefinitions.FindAsync(shiftId);
+            if (shiftDefinition == null)
+            {
+              throw new KeyNotFoundException($"Shift definition with ID {shiftId} not found");
+            }
+
+            var bookingShift = new BookingShift
+            {
+              BookingId = booking.Id,
+              Date = dateLocal,
+              ShiftDefinitionId = shiftId,
+              // Simpan juga data historis shift
+              ShiftName = shiftDefinition.Name,
+              ShiftStartTime = shiftDefinition.StartTime,
+              ShiftEndTime = shiftDefinition.EndTime
+            };
+
+            _context.BookingShifts.Add(bookingShift);
+          }
+        }
+
+        // Remove existing items
+        _context.BookingItems.RemoveRange(booking.BookingItems);
+
+        // Add new items
+        if (bookingDto.Items != null && bookingDto.Items.Any())
+        {
+          foreach (var itemDto in bookingDto.Items)
+          {
+            var item = new BookingItem
+            {
+              BookingId = booking.Id,
+              ItemName = itemDto.ItemName,
+              Weight = itemDto.Weight,
+              Height = itemDto.Height,
+              Quantity = itemDto.Quantity
+            };
+
+            _context.BookingItems.Add(item);
+          }
+        }
+
+        // Handle predefined hazards
+        if (bookingDto.HazardIds != null && bookingDto.HazardIds.Any())
+        {
+          foreach (var hazardId in bookingDto.HazardIds)
+          {
+            // Validasi hazard exists
+            if (await _hazardService.HazardExistsAsync(hazardId))
+            {
+              var bookingHazard = new BookingHazard
+              {
+                BookingId = booking.Id,
+                HazardId = hazardId
+              };
+              _context.BookingHazards.Add(bookingHazard);
+            }
+          }
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Return the updated booking with details
+        return await GetBookingByIdAsync(booking.Id);
       }
-
-      await _context.SaveChangesAsync();
-
-      // Return the updated booking with details
-      return await GetBookingByIdAsync(booking.Id);
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error updating booking: {Message}", ex.Message);
+        throw;
+      }
     }
 
     public async Task DeleteBookingAsync(int id)
     {
-      var booking = await _context.Bookings
-          .Include(r => r.BookingShifts)
-          .Include(r => r.BookingItems) // Add this line to include items
-          .FirstOrDefaultAsync(r => r.Id == id);
-
-      if (booking == null)
+      try
       {
-        throw new KeyNotFoundException($"Booking with ID {id} not found");
+        _logger.LogInformation("Deleting booking ID: {Id}", id);
+
+        var booking = await _context.Bookings
+            .Include(r => r.BookingShifts)
+            .Include(r => r.BookingItems)
+            .Include(r => r.BookingHazards)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (booking == null)
+        {
+          throw new KeyNotFoundException($"Booking with ID {id} not found");
+        }
+
+        // Remove all associated shifts
+        _context.BookingShifts.RemoveRange(booking.BookingShifts);
+
+        // Remove all associated items
+        _context.BookingItems.RemoveRange(booking.BookingItems);
+
+        // Remove all associated hazards
+        _context.BookingHazards.RemoveRange(booking.BookingHazards);
+
+        // Remove the booking
+        _context.Bookings.Remove(booking);
+
+        await _context.SaveChangesAsync();
       }
-
-      // Remove all associated shifts
-      _context.BookingShifts.RemoveRange(booking.BookingShifts);
-
-      // Remove all associated items
-      _context.BookingItems.RemoveRange(booking.BookingItems);
-
-      // Remove the booking
-      _context.Bookings.Remove(booking);
-
-      await _context.SaveChangesAsync();
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error deleting booking: {Message}", ex.Message);
+        throw;
+      }
     }
 
-    public async Task<bool> IsBookingConflictAsync(int craneId, DateTime date, bool isDayShift, bool isNightShift, int? excludeBookingId = null)
+    public async Task<bool> IsShiftBookingConflictAsync(int craneId, DateTime date, int shiftDefinitionId, int? excludeBookingId = null)
     {
-      // Pastikan datetime dalam UTC
-      var dateUtc = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+      // Gunakan tanggal lokal tanpa konversi
+      var dateLocal = date.Date;
 
       var query = _context.BookingShifts
           .Include(rs => rs.Booking)
           .Where(rs => rs.Booking!.CraneId == craneId &&
-                  rs.Date.Date == dateUtc.Date);
+                  rs.Date.Date == dateLocal &&
+                  rs.ShiftDefinitionId == shiftDefinitionId);
 
       if (excludeBookingId.HasValue)
       {
         query = query.Where(rs => rs.BookingId != excludeBookingId.Value);
       }
 
-      var existingShifts = await query.ToListAsync();
-
-      // Check for day shift conflict
-      if (isDayShift && existingShifts.Any(s => s.IsDayShift))
-      {
-        return true;
-      }
-
-      // Check for night shift conflict
-      if (isNightShift && existingShifts.Any(s => s.IsNightShift))
-      {
-        return true;
-      }
-
-      return false;
+      var existingBookings = await query.AnyAsync();
+      return existingBookings;
     }
 
     public async Task<bool> BookingExistsAsync(int id)

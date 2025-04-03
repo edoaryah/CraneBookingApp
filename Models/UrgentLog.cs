@@ -12,7 +12,7 @@ namespace AspnetCoreMvcFull.Models
     public int CraneId { get; set; }
 
     [Required]
-    public DateTime UrgentStartTime { get; set; } = DateTime.UtcNow;
+    public DateTime UrgentStartTime { get; set; } = DateTime.Now;
 
     [Required]
     public int EstimatedUrgentDays { get; set; }

@@ -26,7 +26,7 @@ namespace AspnetCoreMvcFull.Models
     public DateTime EndDate { get; set; }
 
     [Required]
-    public DateTime SubmitTime { get; set; } = DateTime.UtcNow;
+    public DateTime SubmitTime { get; set; } = DateTime.Now;
 
     [StringLength(200)]
     public string? Location { get; set; }

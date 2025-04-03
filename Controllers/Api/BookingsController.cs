@@ -51,7 +51,7 @@ namespace AspnetCoreMvcFull.Controllers.Api
         [FromQuery] DateTime? endDate = null)
     {
       // Jika startDate tidak disediakan, gunakan hari ini
-      DateTime start = startDate?.Date ?? DateTime.Today;
+      DateTime start = startDate?.Date ?? DateTime.Now.Date;
 
       // Jika endDate tidak disediakan, gunakan 6 hari setelah startDate (total 7 hari)
       DateTime end = endDate?.Date ?? start.AddDays(6);
@@ -84,17 +84,17 @@ namespace AspnetCoreMvcFull.Controllers.Api
       return NoContent();
     }
 
-    // GET: api/Bookings/CheckConflict?craneId=1&date=2025-04-01&isDayShift=true&isNightShift=false
-    [HttpGet("CheckConflict")]
-    public async Task<ActionResult<bool>> CheckConflict(
+    // Endpoint baru untuk pengecekan konflik shift
+    // GET: api/Bookings/CheckShiftConflict?craneId=1&date=2025-04-01&shiftDefinitionId=2
+    [HttpGet("CheckShiftConflict")]
+    public async Task<ActionResult<bool>> CheckShiftConflict(
         [FromQuery] int craneId,
         [FromQuery] DateTime date,
-        [FromQuery] bool isDayShift,
-        [FromQuery] bool isNightShift,
+        [FromQuery] int shiftDefinitionId,
         [FromQuery] int? excludeBookingId = null)
     {
-      var hasConflict = await _bookingService.IsBookingConflictAsync(
-          craneId, date, isDayShift, isNightShift, excludeBookingId);
+      var hasConflict = await _bookingService.IsShiftBookingConflictAsync(
+          craneId, date, shiftDefinitionId, excludeBookingId);
 
       return Ok(hasConflict);
     }

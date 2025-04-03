@@ -9,11 +9,15 @@ using System.Text;
 using AspnetCoreMvcFull.Data;
 using AspnetCoreMvcFull.Services;
 using AspnetCoreMvcFull.Filters;
-using AspnetCoreMvcFull.Converters;
 using AspnetCoreMvcFull.Middleware;
 using System.Text.Json.Serialization;
+using AspnetCoreMvcFull.Converters;
+using Microsoft.OpenApi.Any;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Tambahkan ini di bagian awal Program.cs, sebelum kode konfigurasi apapun
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 // Register DbContext dengan connection string
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -24,6 +28,7 @@ builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 // Registrasi Service
 builder.Services.AddScoped<ICraneService, CraneService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IShiftDefinitionService, ShiftDefinitionService>();
 builder.Services.AddScoped<IHazardService, HazardService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -143,7 +148,7 @@ builder.Services.AddControllersWithViews()
       // Tambahkan JsonStringEnumConverter ke daftar converter
       options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 
-      options.JsonSerializerOptions.Converters.Add(new DateTimeConverter());
+      options.JsonSerializerOptions.Converters.Add(new DateTimeSecondsPrecisionConverter());
 
       // Opsional: Konfigurasi tambahan untuk JSON
       options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
@@ -161,6 +166,14 @@ builder.Services.AddSwaggerGen(c =>
 
   // enum to string
   c.UseInlineDefinitionsForEnums();
+
+  // Konfigurasi DateTime untuk menggunakan format lokal
+  c.MapType<DateTime>(() => new OpenApiSchema
+  {
+    Type = "string",
+    Format = "date-time",
+    Example = new OpenApiString(DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"))
+  });
 
   // Konfigurasi Swagger untuk autentikasi
   c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

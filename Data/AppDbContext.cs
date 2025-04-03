@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using AspnetCoreMvcFull.Models;
+using AspnetCoreMvcFull.Data.Seeders;
 
 namespace AspnetCoreMvcFull.Data
 {
@@ -23,6 +24,9 @@ namespace AspnetCoreMvcFull.Data
     public DbSet<Hazard> Hazards { get; set; }
 
     public DbSet<UrgentLog> UrgentLogs { get; set; }
+
+    // Tambahan untuk shift yang fleksibel
+    public DbSet<ShiftDefinition> ShiftDefinitions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +58,13 @@ namespace AspnetCoreMvcFull.Data
           .HasForeignKey(rs => rs.BookingId)
           .OnDelete(DeleteBehavior.Cascade);
 
+      // Relasi BookingShift dan ShiftDefinition
+      modelBuilder.Entity<BookingShift>()
+          .HasOne(bs => bs.ShiftDefinition)
+          .WithMany(sd => sd.BookingShifts)
+          .HasForeignKey(bs => bs.ShiftDefinitionId)
+          .OnDelete(DeleteBehavior.Restrict); // Gunakan Restrict alih-alih Cascade
+
       // Relasi Booking dan BookingItem
       modelBuilder.Entity<BookingItem>()
           .HasOne(bi => bi.Booking)
@@ -68,14 +79,16 @@ namespace AspnetCoreMvcFull.Data
           .HasForeignKey(bh => bh.BookingId)
           .OnDelete(DeleteBehavior.Cascade);
 
-      // Seed data untuk predefined hazards
-      modelBuilder.Entity<Hazard>().HasData(
-          new Hazard { Id = 1, Name = "Listrik Tegangan Tinggi" },
-          new Hazard { Id = 2, Name = "Kondisi Tanah" },
-          new Hazard { Id = 3, Name = "Bekerja di Dekat Bangunan" },
-          new Hazard { Id = 4, Name = "Bekerja di Dekat Area Mining" },
-          new Hazard { Id = 5, Name = "Bekerja di Dekat Air" }
-      );
+      modelBuilder.Entity<BookingHazard>()
+          .HasOne(bh => bh.Hazard)
+          .WithMany()
+          .HasForeignKey(bh => bh.HazardId)
+          .OnDelete(DeleteBehavior.Restrict);
+
+      // Panggil seeders
+      CraneSeeder.Seed(modelBuilder);
+      HazardSeeder.Seed(modelBuilder);
+      ShiftDefinitionSeeder.Seed(modelBuilder);
     }
   }
 }

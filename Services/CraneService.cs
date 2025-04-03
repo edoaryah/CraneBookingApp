@@ -1,10 +1,8 @@
-// Services/CraneService.cs
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using AspnetCoreMvcFull.Data;
 using AspnetCoreMvcFull.DTOs;
 using AspnetCoreMvcFull.Models;
-using AspnetCoreMvcFull.Helpers;
 
 namespace AspnetCoreMvcFull.Services
 {
@@ -53,11 +51,11 @@ namespace AspnetCoreMvcFull.Services
         {
           Id = ul.Id,
           CraneId = ul.CraneId,
-          UrgentStartTime = TimeZoneHelper.UtcToWita(ul.UrgentStartTime),
+          UrgentStartTime = ul.UrgentStartTime,
           EstimatedUrgentDays = ul.EstimatedUrgentDays,
           EstimatedUrgentHours = ul.EstimatedUrgentHours,
-          UrgentEndTime = TimeZoneHelper.UtcToWita(ul.UrgentEndTime),
-          ActualUrgentEndTime = ul.ActualUrgentEndTime.HasValue ? TimeZoneHelper.UtcToWita(ul.ActualUrgentEndTime.Value) : null,
+          UrgentEndTime = ul.UrgentEndTime,
+          ActualUrgentEndTime = ul.ActualUrgentEndTime,
           HangfireJobId = ul.HangfireJobId,
           Reasons = ul.Reasons
         }).ToList() ?? new List<UrgentLogDto>()
@@ -82,11 +80,11 @@ namespace AspnetCoreMvcFull.Services
       {
         Id = ul.Id,
         CraneId = ul.CraneId,
-        UrgentStartTime = TimeZoneHelper.UtcToWita(ul.UrgentStartTime),
+        UrgentStartTime = ul.UrgentStartTime,
         EstimatedUrgentDays = ul.EstimatedUrgentDays,
         EstimatedUrgentHours = ul.EstimatedUrgentHours,
-        UrgentEndTime = TimeZoneHelper.UtcToWita(ul.UrgentEndTime),
-        ActualUrgentEndTime = ul.ActualUrgentEndTime.HasValue ? TimeZoneHelper.UtcToWita(ul.ActualUrgentEndTime.Value) : null,
+        UrgentEndTime = ul.UrgentEndTime,
+        ActualUrgentEndTime = ul.ActualUrgentEndTime,
         HangfireJobId = ul.HangfireJobId,
         Reasons = ul.Reasons
       }).ToList();
@@ -149,16 +147,14 @@ namespace AspnetCoreMvcFull.Services
             throw new ArgumentException("Either EstimatedUrgentDays or EstimatedUrgentHours must be greater than 0");
           }
 
-          // Konversi waktu dari WITA ke UTC jika belum dalam UTC
-          var urgentStartTimeUtc = updateDto.UrgentLog.UrgentStartTime.Kind != DateTimeKind.Utc
-              ? TimeZoneHelper.WitaToUtc(updateDto.UrgentLog.UrgentStartTime)
-              : updateDto.UrgentLog.UrgentStartTime;
+          // Pastikan waktu dalam UTC
+          var urgentStartTime = updateDto.UrgentLog.UrgentStartTime;
 
           // Buat UrgentLog baru
           var urgentLog = new UrgentLog
           {
             CraneId = existingCrane.Id,
-            UrgentStartTime = urgentStartTimeUtc,
+            UrgentStartTime = urgentStartTime,
             EstimatedUrgentDays = updateDto.UrgentLog.EstimatedUrgentDays,
             EstimatedUrgentHours = updateDto.UrgentLog.EstimatedUrgentHours,
             Reasons = updateDto.UrgentLog.Reasons
@@ -201,7 +197,7 @@ namespace AspnetCoreMvcFull.Services
         var latestUrgentLog = existingCrane.UrgentLogs.FirstOrDefault();
         if (latestUrgentLog != null && latestUrgentLog.ActualUrgentEndTime == null)
         {
-          latestUrgentLog.ActualUrgentEndTime = DateTime.UtcNow;
+          latestUrgentLog.ActualUrgentEndTime = DateTime.Now;
 
           // Batalkan scheduled job jika ada JobId
           if (!string.IsNullOrEmpty(latestUrgentLog.HangfireJobId))
@@ -282,7 +278,7 @@ namespace AspnetCoreMvcFull.Services
         if (latestLog != null && latestLog.ActualUrgentEndTime == null)
         {
           crane.Status = CraneStatus.Available;
-          latestLog.ActualUrgentEndTime = DateTime.UtcNow;
+          latestLog.ActualUrgentEndTime = DateTime.Now;
 
           await _context.SaveChangesAsync();
           _logger.LogInformation("Crane {CraneId} status automatically changed to Available via Hangfire job", craneId);

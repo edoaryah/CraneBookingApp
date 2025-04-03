@@ -43,6 +43,23 @@ namespace AspnetCoreMvcFull.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ShiftDefinitions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    StartTime = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    EndTime = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    Category = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ShiftDefinitions", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Bookings",
                 columns: table => new
                 {
@@ -52,9 +69,9 @@ namespace AspnetCoreMvcFull.Migrations
                     Name = table.Column<string>(type: "text", nullable: false),
                     Department = table.Column<string>(type: "text", nullable: false),
                     CraneId = table.Column<int>(type: "integer", nullable: false),
-                    StartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    EndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    SubmitTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    SubmitTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                     Location = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     ProjectSupervisor = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     CostCode = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
@@ -80,10 +97,12 @@ namespace AspnetCoreMvcFull.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     CraneId = table.Column<int>(type: "integer", nullable: false),
-                    UrgentStartTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UrgentStartTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                     EstimatedUrgentDays = table.Column<int>(type: "integer", nullable: false),
                     EstimatedUrgentHours = table.Column<int>(type: "integer", nullable: false),
-                    UrgentEndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UrgentEndTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    ActualUrgentEndTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    HangfireJobId = table.Column<string>(type: "text", nullable: true),
                     Reasons = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
@@ -120,7 +139,7 @@ namespace AspnetCoreMvcFull.Migrations
                         column: x => x.HazardId,
                         principalTable: "Hazards",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -153,9 +172,11 @@ namespace AspnetCoreMvcFull.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     BookingId = table.Column<int>(type: "integer", nullable: false),
-                    Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    IsDayShift = table.Column<bool>(type: "boolean", nullable: false),
-                    IsNightShift = table.Column<bool>(type: "boolean", nullable: false)
+                    Date = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    ShiftDefinitionId = table.Column<int>(type: "integer", nullable: false),
+                    ShiftName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    ShiftStartTime = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    ShiftEndTime = table.Column<TimeSpan>(type: "interval", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -166,6 +187,25 @@ namespace AspnetCoreMvcFull.Migrations
                         principalTable: "Bookings",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_BookingShifts_ShiftDefinitions_ShiftDefinitionId",
+                        column: x => x.ShiftDefinitionId,
+                        principalTable: "ShiftDefinitions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.InsertData(
+                table: "Cranes",
+                columns: new[] { "Id", "Capacity", "Code", "Status" },
+                values: new object[,]
+                {
+                    { 1, 250, "LC008", "Available" },
+                    { 2, 150, "LC009", "Available" },
+                    { 3, 100, "LC010", "Available" },
+                    { 4, 150, "LC011", "Available" },
+                    { 5, 35, "LC012", "Available" },
+                    { 6, 15, "LC013", "Available" }
                 });
 
             migrationBuilder.InsertData(
@@ -178,6 +218,17 @@ namespace AspnetCoreMvcFull.Migrations
                     { 3, "Bekerja di Dekat Bangunan" },
                     { 4, "Bekerja di Dekat Area Mining" },
                     { 5, "Bekerja di Dekat Air" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "ShiftDefinitions",
+                columns: new[] { "Id", "Category", "EndTime", "IsActive", "Name", "StartTime" },
+                values: new object[,]
+                {
+                    { 1, "Day Shift", new TimeSpan(0, 12, 0, 0, 0), true, "Pagi (06:00-12:00)", new TimeSpan(0, 6, 0, 0, 0) },
+                    { 2, "Day Shift", new TimeSpan(0, 18, 0, 0, 0), true, "Siang (12:00-18:00)", new TimeSpan(0, 12, 0, 0, 0) },
+                    { 3, "Night Shift", new TimeSpan(0, 0, 0, 0, 0), true, "Sore (18:00-00:00)", new TimeSpan(0, 18, 0, 0, 0) },
+                    { 4, "Night Shift", new TimeSpan(0, 6, 0, 0, 0), true, "Malam (00:00-06:00)", new TimeSpan(0, 0, 0, 0, 0) }
                 });
 
             migrationBuilder.CreateIndex(
@@ -206,6 +257,11 @@ namespace AspnetCoreMvcFull.Migrations
                 column: "BookingId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_BookingShifts_ShiftDefinitionId",
+                table: "BookingShifts",
+                column: "ShiftDefinitionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UrgentLogs_CraneId",
                 table: "UrgentLogs",
                 column: "CraneId");
@@ -231,6 +287,9 @@ namespace AspnetCoreMvcFull.Migrations
 
             migrationBuilder.DropTable(
                 name: "Bookings");
+
+            migrationBuilder.DropTable(
+                name: "ShiftDefinitions");
 
             migrationBuilder.DropTable(
                 name: "Cranes");

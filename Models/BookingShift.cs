@@ -14,11 +14,18 @@ namespace AspnetCoreMvcFull.Models
     public DateTime Date { get; set; }
 
     [Required]
-    public bool IsDayShift { get; set; }
+    public int ShiftDefinitionId { get; set; }
 
-    [Required]
-    public bool IsNightShift { get; set; }
+    // Properti tambahan untuk menyimpan data historis
+    [StringLength(50)]
+    public string? ShiftName { get; set; }
+
+    public TimeSpan ShiftStartTime { get; set; }
+
+    public TimeSpan ShiftEndTime { get; set; }
 
     public virtual Booking? Booking { get; set; }
+
+    public virtual ShiftDefinition? ShiftDefinition { get; set; }
   }
 }

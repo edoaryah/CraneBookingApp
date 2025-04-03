@@ -1,3 +1,4 @@
+// Services/IBookingService.cs
 using AspnetCoreMvcFull.DTOs;
 
 namespace AspnetCoreMvcFull.Services
@@ -11,7 +12,9 @@ namespace AspnetCoreMvcFull.Services
     Task<BookingDetailDto> CreateBookingAsync(BookingCreateDto bookingDto);
     Task<BookingDetailDto> UpdateBookingAsync(int id, BookingUpdateDto bookingDto);
     Task DeleteBookingAsync(int id);
-    Task<bool> IsBookingConflictAsync(int craneId, DateTime date, bool isDayShift, bool isNightShift, int? excludeBookingId = null);
     Task<bool> BookingExistsAsync(int id);
+
+    // Method for shift conflict checking
+    Task<bool> IsShiftBookingConflictAsync(int craneId, DateTime date, int shiftDefinitionId, int? excludeBookingId = null);
   }
 }

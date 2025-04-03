@@ -74,7 +74,7 @@ namespace AspnetCoreMvcFull.Controllers
         var authProperties = new AuthenticationProperties
         {
           IsPersistent = model.RememberMe,
-          ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+          ExpiresUtc = DateTimeOffset.Now.AddHours(8)
         };
 
         // Sign in user
@@ -91,7 +91,7 @@ namespace AspnetCoreMvcFull.Controllers
           // SameSite = SameSiteMode.Strict,
           Secure = false,
           SameSite = SameSiteMode.Lax,
-          Expires = DateTimeOffset.UtcNow.AddHours(8)
+          Expires = DateTimeOffset.Now.AddHours(8)
         });
 
         _logger.LogInformation("User {Username} logged in successfully", model.Username);
