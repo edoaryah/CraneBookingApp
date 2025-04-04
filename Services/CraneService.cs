@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using AspnetCoreMvcFull.Data;
 using AspnetCoreMvcFull.DTOs;
 using AspnetCoreMvcFull.Models;
+using AspnetCoreMvcFull.Events;
 
 namespace AspnetCoreMvcFull.Services
 {
@@ -10,11 +11,13 @@ namespace AspnetCoreMvcFull.Services
   {
     private readonly AppDbContext _context;
     private readonly ILogger<CraneService> _logger;
+    private readonly IEventPublisher _eventPublisher;
 
-    public CraneService(AppDbContext context, ILogger<CraneService> logger)
+    public CraneService(AppDbContext context, ILogger<CraneService> logger, IEventPublisher eventPublisher)
     {
       _context = context;
       _logger = logger;
+      _eventPublisher = eventPublisher;
     }
 
     public async Task<IEnumerable<CraneDto>> GetAllCranesAsync()
@@ -178,8 +181,14 @@ namespace AspnetCoreMvcFull.Services
           urgentLog.HangfireJobId = jobId;
           await _context.SaveChangesAsync();
 
-          _logger.LogInformation("Scheduled Hangfire job with ID {JobId} for crane {CraneId} to change status to Available at {EndTime}",
-              jobId, existingCrane.Id, urgentLog.UrgentEndTime);
+          // Publish event for relocation
+          await _eventPublisher.PublishAsync(new CraneMaintenanceEvent
+          {
+            CraneId = existingCrane.Id,
+            MaintenanceStartTime = urgentLog.UrgentStartTime,
+            MaintenanceEndTime = urgentLog.UrgentEndTime,
+            Reason = urgentLog.Reasons
+          });
         }
         else
         {
@@ -282,6 +291,15 @@ namespace AspnetCoreMvcFull.Services
 
           await _context.SaveChangesAsync();
           _logger.LogInformation("Crane {CraneId} status automatically changed to Available via Hangfire job", craneId);
+
+          // Publish event for checking any necessary relocations after maintenance
+          await _eventPublisher.PublishAsync(new CraneMaintenanceEvent
+          {
+            CraneId = craneId,
+            MaintenanceStartTime = latestLog.UrgentStartTime,
+            MaintenanceEndTime = DateTime.Now,
+            Reason = latestLog.Reasons
+          });
         }
         else
         {

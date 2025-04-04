@@ -16,5 +16,7 @@ namespace AspnetCoreMvcFull.Services
 
     // Method for shift conflict checking
     Task<bool> IsShiftBookingConflictAsync(int craneId, DateTime date, int shiftDefinitionId, int? excludeBookingId = null);
+
+    Task<int> RelocateAffectedBookingsAsync(int craneId, DateTime maintenanceStartTime, DateTime maintenanceEndTime);
   }
 }

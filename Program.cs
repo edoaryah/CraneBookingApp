@@ -9,6 +9,8 @@ using System.Text;
 using AspnetCoreMvcFull.Data;
 using AspnetCoreMvcFull.Services;
 using AspnetCoreMvcFull.Filters;
+using AspnetCoreMvcFull.Events;
+using AspnetCoreMvcFull.Events.Handlers;
 using AspnetCoreMvcFull.Middleware;
 using System.Text.Json.Serialization;
 using AspnetCoreMvcFull.Converters;
@@ -25,17 +27,23 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
-// Registrasi Service
-builder.Services.AddScoped<ICraneService, CraneService>();
-builder.Services.AddScoped<IBookingService, BookingService>();
-builder.Services.AddScoped<IShiftDefinitionService, ShiftDefinitionService>();
-builder.Services.AddScoped<IHazardService, HazardService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IJwtService, JwtService>();
-
 // Registrasi Filter
 builder.Services.AddScoped<GlobalExceptionFilter>();
 builder.Services.AddScoped<AuthorizationFilter>();
+
+// Tambahkan setelah registrasi service yang ada
+// Registrasi event infrastructure
+builder.Services.AddSingleton<IEventPublisher, EventPublisher>();
+builder.Services.AddScoped<IEventHandler<CraneMaintenanceEvent>, BookingRelocationHandler>();
+
+// Pastikan BookingService didaftarkan sebelum CraneService
+// untuk menghindari masalah circular dependency
+builder.Services.AddScoped<IHazardService, HazardService>();
+builder.Services.AddScoped<IShiftDefinitionService, ShiftDefinitionService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<ICraneService, CraneService>();
 
 // Konfigurasi Autentikasi
 builder.Services.AddAuthentication(options =>
