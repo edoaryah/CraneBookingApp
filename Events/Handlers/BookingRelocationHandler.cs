@@ -1,3 +1,4 @@
+// Events/Handlers/BookingRelocateHandler.cs
 using System;
 using System.Threading.Tasks;
 using AspnetCoreMvcFull.Services;
@@ -9,11 +10,16 @@ namespace AspnetCoreMvcFull.Events.Handlers
   {
     private readonly IBookingService _bookingService;
     private readonly ILogger<BookingRelocationHandler> _logger;
+    private readonly IScheduleConflictService _scheduleConflictService;
 
-    public BookingRelocationHandler(IBookingService bookingService, ILogger<BookingRelocationHandler> logger)
+    public BookingRelocationHandler(
+        IBookingService bookingService,
+        ILogger<BookingRelocationHandler> logger,
+        IScheduleConflictService scheduleConflictService)
     {
       _bookingService = bookingService;
       _logger = logger;
+      _scheduleConflictService = scheduleConflictService;
     }
 
     public async Task HandleAsync(CraneMaintenanceEvent @event)

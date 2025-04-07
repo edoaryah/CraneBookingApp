@@ -28,6 +28,10 @@ namespace AspnetCoreMvcFull.Data
     // Tambahan untuk shift yang fleksibel
     public DbSet<ShiftDefinition> ShiftDefinitions { get; set; }
 
+    public DbSet<MaintenanceSchedule> MaintenanceSchedules { get; set; }
+
+    public DbSet<MaintenanceScheduleShift> MaintenanceScheduleShifts { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       base.OnModelCreating(modelBuilder);
@@ -83,6 +87,27 @@ namespace AspnetCoreMvcFull.Data
           .HasOne(bh => bh.Hazard)
           .WithMany()
           .HasForeignKey(bh => bh.HazardId)
+          .OnDelete(DeleteBehavior.Restrict);
+
+      // Relasi MaintenanceSchedule dan Crane
+      modelBuilder.Entity<MaintenanceSchedule>()
+          .HasOne(ms => ms.Crane)
+          .WithMany()
+          .HasForeignKey(ms => ms.CraneId)
+          .OnDelete(DeleteBehavior.Cascade);
+
+      // Relasi MaintenanceSchedule dan MaintenanceScheduleShift
+      modelBuilder.Entity<MaintenanceScheduleShift>()
+          .HasOne(mss => mss.MaintenanceSchedule)
+          .WithMany(ms => ms.MaintenanceScheduleShifts)
+          .HasForeignKey(mss => mss.MaintenanceScheduleId)
+          .OnDelete(DeleteBehavior.Cascade);
+
+      // Relasi MaintenanceScheduleShift dan ShiftDefinition
+      modelBuilder.Entity<MaintenanceScheduleShift>()
+          .HasOne(mss => mss.ShiftDefinition)
+          .WithMany()
+          .HasForeignKey(mss => mss.ShiftDefinitionId)
           .OnDelete(DeleteBehavior.Restrict);
 
       // Panggil seeders

@@ -91,6 +91,31 @@ namespace AspnetCoreMvcFull.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MaintenanceSchedules",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CraneId = table.Column<int>(type: "integer", nullable: false),
+                    Title = table.Column<string>(type: "text", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    CreatedBy = table.Column<string>(type: "text", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MaintenanceSchedules", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceSchedules_Cranes_CraneId",
+                        column: x => x.CraneId,
+                        principalTable: "Cranes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UrgentLogs",
                 columns: table => new
                 {
@@ -195,6 +220,36 @@ namespace AspnetCoreMvcFull.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "MaintenanceScheduleShifts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    MaintenanceScheduleId = table.Column<int>(type: "integer", nullable: false),
+                    Date = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    ShiftDefinitionId = table.Column<int>(type: "integer", nullable: false),
+                    ShiftName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    ShiftStartTime = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    ShiftEndTime = table.Column<TimeSpan>(type: "interval", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MaintenanceScheduleShifts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceScheduleShifts_MaintenanceSchedules_MaintenanceS~",
+                        column: x => x.MaintenanceScheduleId,
+                        principalTable: "MaintenanceSchedules",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceScheduleShifts_ShiftDefinitions_ShiftDefinitionId",
+                        column: x => x.ShiftDefinitionId,
+                        principalTable: "ShiftDefinitions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
             migrationBuilder.InsertData(
                 table: "Cranes",
                 columns: new[] { "Id", "Capacity", "Code", "Status" },
@@ -262,6 +317,21 @@ namespace AspnetCoreMvcFull.Migrations
                 column: "ShiftDefinitionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceSchedules_CraneId",
+                table: "MaintenanceSchedules",
+                column: "CraneId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceScheduleShifts_MaintenanceScheduleId",
+                table: "MaintenanceScheduleShifts",
+                column: "MaintenanceScheduleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceScheduleShifts_ShiftDefinitionId",
+                table: "MaintenanceScheduleShifts",
+                column: "ShiftDefinitionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UrgentLogs_CraneId",
                 table: "UrgentLogs",
                 column: "CraneId");
@@ -280,6 +350,9 @@ namespace AspnetCoreMvcFull.Migrations
                 name: "BookingShifts");
 
             migrationBuilder.DropTable(
+                name: "MaintenanceScheduleShifts");
+
+            migrationBuilder.DropTable(
                 name: "UrgentLogs");
 
             migrationBuilder.DropTable(
@@ -287,6 +360,9 @@ namespace AspnetCoreMvcFull.Migrations
 
             migrationBuilder.DropTable(
                 name: "Bookings");
+
+            migrationBuilder.DropTable(
+                name: "MaintenanceSchedules");
 
             migrationBuilder.DropTable(
                 name: "ShiftDefinitions");

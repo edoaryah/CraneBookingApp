@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AspnetCoreMvcFull.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250403023402_InitialCreate")]
+    [Migration("20250404095620_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -292,6 +292,81 @@ namespace AspnetCoreMvcFull.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.MaintenanceSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CraneId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CraneId");
+
+                    b.ToTable("MaintenanceSchedules");
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.MaintenanceScheduleShift", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("MaintenanceScheduleId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ShiftDefinitionId")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeSpan>("ShiftEndTime")
+                        .HasColumnType("interval");
+
+                    b.Property<string>("ShiftName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<TimeSpan>("ShiftStartTime")
+                        .HasColumnType("interval");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaintenanceScheduleId");
+
+                    b.HasIndex("ShiftDefinitionId");
+
+                    b.ToTable("MaintenanceScheduleShifts");
+                });
+
             modelBuilder.Entity("AspnetCoreMvcFull.Models.ShiftDefinition", b =>
                 {
                     b.Property<int>("Id")
@@ -461,6 +536,36 @@ namespace AspnetCoreMvcFull.Migrations
                     b.Navigation("ShiftDefinition");
                 });
 
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.MaintenanceSchedule", b =>
+                {
+                    b.HasOne("AspnetCoreMvcFull.Models.Crane", "Crane")
+                        .WithMany()
+                        .HasForeignKey("CraneId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Crane");
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.MaintenanceScheduleShift", b =>
+                {
+                    b.HasOne("AspnetCoreMvcFull.Models.MaintenanceSchedule", "MaintenanceSchedule")
+                        .WithMany("MaintenanceScheduleShifts")
+                        .HasForeignKey("MaintenanceScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AspnetCoreMvcFull.Models.ShiftDefinition", "ShiftDefinition")
+                        .WithMany()
+                        .HasForeignKey("ShiftDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MaintenanceSchedule");
+
+                    b.Navigation("ShiftDefinition");
+                });
+
             modelBuilder.Entity("AspnetCoreMvcFull.Models.UrgentLog", b =>
                 {
                     b.HasOne("AspnetCoreMvcFull.Models.Crane", "Crane")
@@ -484,6 +589,11 @@ namespace AspnetCoreMvcFull.Migrations
             modelBuilder.Entity("AspnetCoreMvcFull.Models.Crane", b =>
                 {
                     b.Navigation("UrgentLogs");
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.MaintenanceSchedule", b =>
+                {
+                    b.Navigation("MaintenanceScheduleShifts");
                 });
 
             modelBuilder.Entity("AspnetCoreMvcFull.Models.ShiftDefinition", b =>

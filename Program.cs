@@ -42,7 +42,9 @@ builder.Services.AddScoped<IHazardService, HazardService>();
 builder.Services.AddScoped<IShiftDefinitionService, ShiftDefinitionService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IScheduleConflictService, ScheduleConflictService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IMaintenanceScheduleService, MaintenanceScheduleService>();
 builder.Services.AddScoped<ICraneService, CraneService>();
 
 // Konfigurasi Autentikasi

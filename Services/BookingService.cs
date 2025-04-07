@@ -1,3 +1,4 @@
+// Services/BookingService.cs
 using Microsoft.EntityFrameworkCore;
 using AspnetCoreMvcFull.Data;
 using AspnetCoreMvcFull.DTOs;
@@ -11,6 +12,7 @@ namespace AspnetCoreMvcFull.Services
     private readonly ICraneService _craneService;
     private readonly IHazardService _hazardService;
     private readonly IShiftDefinitionService _shiftDefinitionService;
+    private readonly IScheduleConflictService _scheduleConflictService;
     private readonly ILogger<BookingService> _logger;
 
     public BookingService(
@@ -18,12 +20,14 @@ namespace AspnetCoreMvcFull.Services
         ICraneService craneService,
         IHazardService hazardService,
         IShiftDefinitionService shiftDefinitionService,
+        IScheduleConflictService scheduleConflictService,
         ILogger<BookingService> logger)
     {
       _context = context;
       _craneService = craneService;
       _hazardService = hazardService;
       _shiftDefinitionService = shiftDefinitionService;
+      _scheduleConflictService = scheduleConflictService;
       _logger = logger;
     }
 
@@ -180,7 +184,8 @@ namespace AspnetCoreMvcFull.Services
         {
           CraneId = crane.Code,
           Capacity = crane.Capacity,
-          Bookings = new List<BookingCalendarDto>()
+          Bookings = new List<BookingCalendarDto>(),
+          MaintenanceSchedules = new List<MaintenanceCalendarDto>()
         };
 
         // Group shifts by date and booking
@@ -213,6 +218,49 @@ namespace AspnetCoreMvcFull.Services
         }
 
         response.Cranes.Add(craneDto);
+      }
+
+      // Dapatkan maintenance shifts dalam rentang tanggal
+      var maintenanceShifts = await _context.MaintenanceScheduleShifts
+          .Include(ms => ms.MaintenanceSchedule)
+          .ThenInclude(m => m!.Crane)
+          .Include(ms => ms.ShiftDefinition)
+          .Where(ms => ms.Date >= startDateLocal && ms.Date <= endDateLocal)
+          .ToListAsync();
+
+      // Tambahkan maintenance shifts ke response
+      foreach (var crane in cranes)
+      {
+        var craneDto = response.Cranes.FirstOrDefault(c => c.CraneId == crane.Code);
+        if (craneDto == null) continue;
+
+        // Group maintenance shifts by date and schedule
+        var craneMaintenance = maintenanceShifts
+            .Where(ms => ms.MaintenanceSchedule!.CraneId == crane.Id)
+            .GroupBy(ms => new { ms.Date, ms.MaintenanceScheduleId })
+            .ToList();
+
+        foreach (var group in craneMaintenance)
+        {
+          // Get first shift to access maintenance info
+          var firstShift = group.First();
+
+          var calendarMaintenance = new MaintenanceCalendarDto
+          {
+            Id = firstShift.MaintenanceScheduleId,
+            Title = firstShift.MaintenanceSchedule!.Title,
+            Date = group.Key.Date,
+            Shifts = group.Select(s => new ShiftBookingDto
+            {
+              ShiftDefinitionId = s.ShiftDefinitionId,
+              ShiftName = s.ShiftName ?? s.ShiftDefinition?.Name,
+              StartTime = s.ShiftStartTime != default ? s.ShiftStartTime : s.ShiftDefinition?.StartTime ?? TimeSpan.Zero,
+              EndTime = s.ShiftEndTime != default ? s.ShiftEndTime : s.ShiftDefinition?.EndTime ?? TimeSpan.Zero
+            }).ToList()
+          };
+
+          craneDto.MaintenanceSchedules.Add(calendarMaintenance);
+        }
       }
 
       return response;
@@ -287,7 +335,7 @@ namespace AspnetCoreMvcFull.Services
               throw new KeyNotFoundException($"Shift definition with ID {shiftId} not found");
             }
 
-            bool hasConflict = await IsShiftBookingConflictAsync(
+            bool hasConflict = await _scheduleConflictService.IsBookingConflictAsync(
                 bookingDto.CraneId,
                 dateLocal,
                 shiftId);
@@ -297,6 +345,19 @@ namespace AspnetCoreMvcFull.Services
               // Get shift name for better error message
               var shift = await _context.ShiftDefinitions.FindAsync(shiftId);
               throw new InvalidOperationException($"Scheduling conflict detected for date {dateLocal.ToShortDateString()} and shift {shift?.Name ?? shiftId.ToString()}");
+            }
+
+            // Periksa konflik dengan jadwal maintenance
+            bool hasMaintenanceConflict = await _scheduleConflictService.IsMaintenanceConflictAsync(
+                bookingDto.CraneId,
+                dateLocal,
+                shiftId);
+
+            if (hasMaintenanceConflict)
+            {
+              // Get shift name for better error message
+              var shift = await _context.ShiftDefinitions.FindAsync(shiftId);
+              throw new InvalidOperationException($"Scheduling conflict with maintenance schedule detected for date {dateLocal.ToShortDateString()} and shift {shift?.Name ?? shiftId.ToString()}");
             }
           }
         }
@@ -487,7 +548,7 @@ namespace AspnetCoreMvcFull.Services
               throw new KeyNotFoundException($"Shift definition with ID {shiftId} not found");
             }
 
-            bool hasConflict = await IsShiftBookingConflictAsync(
+            bool hasConflict = await _scheduleConflictService.IsBookingConflictAsync(
                 bookingDto.CraneId,
                 dateLocal,
                 shiftId,
@@ -498,6 +559,19 @@ namespace AspnetCoreMvcFull.Services
               // Get shift name for better error message
               var shift = await _context.ShiftDefinitions.FindAsync(shiftId);
               throw new InvalidOperationException($"Scheduling conflict detected for date {dateLocal.ToShortDateString()} and shift {shift?.Name ?? shiftId.ToString()}");
+            }
+
+            // Periksa konflik dengan jadwal maintenance
+            bool hasMaintenanceConflict = await _scheduleConflictService.IsMaintenanceConflictAsync(
+                bookingDto.CraneId,
+                dateLocal,
+                shiftId);
+
+            if (hasMaintenanceConflict)
+            {
+              // Get shift name for better error message
+              var shift = await _context.ShiftDefinitions.FindAsync(shiftId);
+              throw new InvalidOperationException($"Scheduling conflict with maintenance schedule detected for date {dateLocal.ToShortDateString()} and shift {shift?.Name ?? shiftId.ToString()}");
             }
           }
         }
@@ -722,8 +796,10 @@ namespace AspnetCoreMvcFull.Services
             foreach (var shiftId in shiftIds)
             {
               // Cek apakah ada konflik pada tanggal dan shift tersebut
-              bool hasConflict = await IsShiftBookingConflictAsync(craneId, candidateDate, shiftId);
-              if (hasConflict)
+              bool hasBookingConflict = await _scheduleConflictService.IsBookingConflictAsync(craneId, candidateDate, shiftId);
+              bool hasMaintenanceConflict = await _scheduleConflictService.IsMaintenanceConflictAsync(craneId, candidateDate, shiftId);
+
+              if (hasBookingConflict || hasMaintenanceConflict)
               {
                 dateHasConflict = true;
                 break;
@@ -834,22 +910,7 @@ namespace AspnetCoreMvcFull.Services
 
     public async Task<bool> IsShiftBookingConflictAsync(int craneId, DateTime date, int shiftDefinitionId, int? excludeBookingId = null)
     {
-      // Gunakan tanggal lokal tanpa konversi
-      var dateLocal = date.Date;
-
-      var query = _context.BookingShifts
-          .Include(rs => rs.Booking)
-          .Where(rs => rs.Booking!.CraneId == craneId &&
-                  rs.Date.Date == dateLocal &&
-                  rs.ShiftDefinitionId == shiftDefinitionId);
-
-      if (excludeBookingId.HasValue)
-      {
-        query = query.Where(rs => rs.BookingId != excludeBookingId.Value);
-      }
-
-      var existingBookings = await query.AnyAsync();
-      return existingBookings;
+      return await _scheduleConflictService.IsBookingConflictAsync(craneId, date, shiftDefinitionId, excludeBookingId);
     }
 
     public async Task<bool> BookingExistsAsync(int id)
