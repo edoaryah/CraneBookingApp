@@ -343,50 +343,7 @@ function initLiftedItemsTable() {
   addLiftedItemRow();
 }
 
-// Add a new row to the lifted items table
-// function addLiftedItemRow() {
-//   const tbody = document.getElementById('liftedItemsBody');
-//   const rowIndex = tbody.rows.length;
-
-//   const row = document.createElement('tr');
-
-//   row.innerHTML = `
-//     <td>
-//       <input type="text" class="form-control item-name" required />
-//     </td>
-//     <td>
-//       <input type="number" class="form-control item-height"
-//              min="0.01" step="0.01" required />
-//     </td>
-//     <td>
-//       <input type="number" class="form-control item-weight"
-//              min="0.01" step="0.01" required />
-//     </td>
-//     <td>
-//       <input type="number" class="form-control item-quantity"
-//              min="1" step="1" value="1" required />
-//     </td>
-//     <td class="text-center">
-//       <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
-//         <i class="bx bx-trash"></i>
-//       </button>
-//     </td>
-//   `;
-
-//   // Add event listener to remove button
-//   const removeBtn = row.querySelector('.remove-item-btn');
-//   removeBtn.addEventListener('click', function () {
-//     // Don't allow removing if it's the only row
-//     if (tbody.rows.length > 1) {
-//       row.remove();
-//     } else {
-//       alert('At least one item is required.');
-//     }
-//   });
-
-//   tbody.appendChild(row);
-// }
-// Add a new row to the lifted items table
+// Add a new row to the lifted items table with button column fit content
 function addLiftedItemRow() {
   const tbody = document.getElementById('liftedItemsBody');
   const rowIndex = tbody.rows.length;
@@ -394,22 +351,22 @@ function addLiftedItemRow() {
   const row = document.createElement('tr');
 
   row.innerHTML = `
-    <td style="min-width: 250px;">
+    <td style="min-width: 220px; padding-right: 5px;">
       <input type="text" class="form-control item-name" required />
     </td>
-    <td style="min-width: 130px;">
+    <td style="min-width: 140px; padding-right: 5px;">
       <input type="number" class="form-control item-height"
              min="0.01" step="0.01" required />
     </td>
-    <td style="min-width: 130px;">
+    <td style="min-width: 140px; padding-right: 5px;">
       <input type="number" class="form-control item-weight"
              min="0.01" step="0.01" required />
     </td>
-    <td style="min-width: 130px;">
+    <td style="min-width: 140px; padding-right: 5px;">
       <input type="number" class="form-control item-quantity"
              min="1" step="1" value="1" required />
     </td>
-    <td style="min-width: 60px;" class="text-center">
+    <td style="width: 1%; white-space: nowrap;">
       <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
         <i class="bx bx-trash"></i>
       </button>
