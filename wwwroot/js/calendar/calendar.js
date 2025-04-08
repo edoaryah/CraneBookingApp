@@ -3,6 +3,7 @@ let currentDate = new Date();
 // Reset time to midnight to avoid timezone issues
 currentDate.setHours(0, 0, 0, 0);
 let calendarData = null;
+let shiftDefinitions = [];
 
 // Fungsi untuk menambahkan hari ke date
 function addDays(date, days) {
@@ -21,12 +22,50 @@ function formatDateForApi(date) {
 // Fungsi untuk menginisialisasi kalender
 function initializeCalendar() {
   updateDateHeaders();
-  fetchCalendarData();
+
+  // Fetch shift definitions first, then calendar data
+  fetchShiftDefinitions()
+    .then(() => {
+      fetchCalendarData();
+    });
 
   // Disable prev button if we're at the current week
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
   document.getElementById('prevWeek').disabled = currentDate <= today;
+
+  // Initialize tooltip container
+  if (!document.getElementById('calendar-tooltip')) {
+    const tooltip = document.createElement('div');
+    tooltip.id = 'calendar-tooltip';
+    tooltip.className = 'calendar-tooltip';
+    document.body.appendChild(tooltip);
+  }
+}
+
+// Fungsi untuk mengambil definisi shift dari API
+async function fetchShiftDefinitions() {
+  try {
+    const response = await fetch('/api/ShiftDefinitions');
+    if (!response.ok) {
+      throw new Error('Failed to fetch shift definitions');
+    }
+
+    shiftDefinitions = await response.json();
+
+    // Sort shift definitions by start time
+    shiftDefinitions.sort((a, b) => {
+      const timeA = a.startTime.split(':').map(Number);
+      const timeB = b.startTime.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    });
+
+    return shiftDefinitions;
+  } catch (error) {
+    console.error('Error fetching shift definitions:', error);
+    document.getElementById('calendarError').style.display = 'block';
+    throw error;
+  }
 }
 
 // Fungsi untuk memperbarui header tanggal
@@ -70,8 +109,6 @@ function fetchCalendarData() {
       return response.json();
     })
     .then(data => {
-      console.log('Calendar API response:', data);
-
       // Proses data: tanggal dari server sudah dalam WITA
       calendarData = data;
       renderCalendar();
@@ -111,7 +148,7 @@ function renderCalendar() {
     craneItem.innerHTML = `
       <div class="p-2">
         <div class="fw-bold">${crane.craneId}</div>
-        <div class="text-muted">${crane.capacity}</div>
+        <div class="text-muted">${crane.capacity} TON</div>
       </div>
     `;
     craneListEl.appendChild(craneItem);
@@ -126,20 +163,44 @@ function renderCalendar() {
       const cell = document.createElement('div');
       cell.className = 'schedule-cell';
       cell.dataset.dateOffset = i;
-      cell.innerHTML = `
-        <div class="shift-container">
-          <div class="day-shift-container"></div>
-          <div class="night-shift-container"></div>
-        </div>
-      `;
+
+      // Create shift slots container
+      const shiftsContainer = document.createElement('div');
+      shiftsContainer.className = 'shift-container';
+
+      // Create shift slots dynamically based on shift definitions
+      if (shiftDefinitions.length > 0) {
+        // Calculate the height percentage for each shift slot
+        const slotHeightPercent = 100 / shiftDefinitions.length;
+
+        shiftDefinitions.forEach(shift => {
+          const shiftSlot = document.createElement('div');
+          shiftSlot.className = 'shift-slot';
+          shiftSlot.dataset.shiftId = shift.id;
+          shiftSlot.style.height = `${slotHeightPercent}%`;
+          shiftsContainer.appendChild(shiftSlot);
+        });
+      } else {
+        // Default fallback if no shift definitions loaded
+        const defaultSlot = document.createElement('div');
+        defaultSlot.className = 'shift-slot';
+        defaultSlot.style.height = '100%';
+        shiftsContainer.appendChild(defaultSlot);
+      }
+
+      cell.appendChild(shiftsContainer);
       scheduleRow.appendChild(cell);
     }
 
     scheduleRowsEl.appendChild(scheduleRow);
   });
 
-  // Populate bookings into cells
+  // Populate bookings and maintenance schedules into cells
   renderBookings();
+  renderMaintenanceSchedules();
+
+  // Add event listeners for tooltips
+  setupTooltips();
 }
 
 // Fungsi untuk merender booking ke dalam sel-sel kalender
@@ -171,32 +232,159 @@ function renderBookings() {
       const cell = row.querySelector(`.schedule-cell[data-date-offset="${daysDiff}"]`);
       if (!cell) return;
 
-      // Add booking to day shift if applicable
-      if (booking.isDayShift) {
-        addBookingCard(cell, '.day-shift-container', booking, 'day-shift');
-      }
+      // Process each shift in the booking
+      booking.shifts.forEach(shift => {
+        // Find the shift slot based on the shift definition ID
+        const shiftSlot = cell.querySelector(`.shift-slot[data-shift-id="${shift.shiftDefinitionId}"]`);
+        if (!shiftSlot) return;
 
-      // Add booking to night shift if applicable
-      if (booking.isNightShift) {
-        addBookingCard(cell, '.night-shift-container', booking, 'night-shift');
-      }
+        // Determine department class for styling
+        let deptClass = 'dept-default';
+        const department = booking.department.toLowerCase();
+
+        if (department.includes('stores') || department.includes('inventory')) {
+          deptClass = 'dept-stores';
+        }
+
+        // Create booking card
+        const card = document.createElement('div');
+        card.className = `booking-card ${deptClass}`;
+        card.dataset.bookingId = booking.id;
+        card.dataset.bookingNumber = booking.bookingNumber;
+        card.dataset.department = booking.department;
+        card.dataset.shiftName = shift.shiftName;
+        card.dataset.startTime = shift.startTime;
+        card.dataset.endTime = shift.endTime;
+
+        const content = document.createElement('div');
+        content.className = 'booking-card-content';
+        content.textContent = booking.department;
+
+        card.appendChild(content);
+        shiftSlot.appendChild(card);
+      });
     });
   });
 }
 
-// Helper function untuk menambahkan card booking
-function addBookingCard(cell, containerSelector, booking, shiftClass) {
-  const container = cell.querySelector(containerSelector);
-  const card = document.createElement('div');
-  card.className = `booking-card ${shiftClass}`;
-  card.title = `${booking.bookingNumber} - ${booking.department}`;
+// Fungsi untuk merender jadwal maintenance ke dalam sel-sel kalender
+function renderMaintenanceSchedules() {
+  if (!calendarData || !calendarData.cranes) return;
 
-  const content = document.createElement('div');
-  content.className = 'booking-card-content';
-  content.textContent = booking.department;
+  calendarData.cranes.forEach(crane => {
+    const maintenanceSchedules = crane.maintenanceSchedules || [];
+    const row = document.querySelector(`.schedule-row[data-crane-id="${crane.craneId}"]`);
 
-  card.appendChild(content);
-  container.appendChild(card);
+    if (!row) {
+      console.warn(`Schedule row not found for crane ${crane.craneId}`);
+      return;
+    }
+
+    // Loop through all maintenance schedules for this crane
+    maintenanceSchedules.forEach(maintenance => {
+      // Normalize the maintenance date
+      const maintenanceDate = new Date(maintenance.date);
+      maintenanceDate.setHours(0, 0, 0, 0); // Reset time for accurate comparison
+
+      // Calculate day offset from the start of the week (currentDate)
+      const daysDiff = Math.floor((maintenanceDate - currentDate) / (24 * 60 * 60 * 1000));
+
+      // Skip maintenance outside the current week view
+      if (daysDiff < 0 || daysDiff > 6) return;
+
+      // Find the cell for this date
+      const cell = row.querySelector(`.schedule-cell[data-date-offset="${daysDiff}"]`);
+      if (!cell) return;
+
+      // Process each shift in the maintenance schedule
+      maintenance.shifts.forEach(shift => {
+        // Find the shift slot based on the shift definition ID
+        const shiftSlot = cell.querySelector(`.shift-slot[data-shift-id="${shift.shiftDefinitionId}"]`);
+        if (!shiftSlot) {
+          console.warn(`Shift slot not found for shift definition ID ${shift.shiftDefinitionId}`);
+          return;
+        }
+
+        // Create maintenance card
+        const card = document.createElement('div');
+        card.className = 'maintenance-card';
+        card.dataset.maintenanceId = maintenance.id;
+        card.dataset.maintenanceTitle = maintenance.title;
+        card.dataset.shiftName = shift.shiftName;
+        card.dataset.startTime = shift.startTime;
+        card.dataset.endTime = shift.endTime;
+
+        const title = document.createElement('div');
+        title.className = 'maintenance-title';
+        title.textContent = maintenance.title;
+
+        card.appendChild(title);
+        shiftSlot.appendChild(card);
+      });
+    });
+  });
+}
+
+// Fungsi untuk mengatur tooltips
+function setupTooltips() {
+  const tooltip = document.getElementById('calendar-tooltip');
+
+  // Add event listeners to booking cards
+  document.querySelectorAll('.booking-card').forEach(card => {
+    card.addEventListener('mouseenter', function(e) {
+      const bookingNumber = this.dataset.bookingNumber;
+      const department = this.dataset.department;
+      const shiftName = this.dataset.shiftName;
+      const startTime = this.dataset.startTime ? this.dataset.startTime.substring(0, 5) : ''; // Format HH:MM
+      const endTime = this.dataset.endTime ? this.dataset.endTime.substring(0, 5) : ''; // Format HH:MM
+
+      tooltip.innerHTML = `
+        <div class="calendar-tooltip-title">${bookingNumber}</div>
+        <div class="calendar-tooltip-content">
+          <div>Department: ${department}</div>
+          <div>Shift: ${shiftName}</div>
+          <div>Time: ${startTime} - ${endTime}</div>
+        </div>
+      `;
+
+      // Position tooltip near the cursor
+      tooltip.style.left = (e.pageX + 10) + 'px';
+      tooltip.style.top = (e.pageY + 10) + 'px';
+      tooltip.style.display = 'block';
+    });
+
+    card.addEventListener('mouseleave', function() {
+      tooltip.style.display = 'none';
+    });
+  });
+
+  // Add event listeners to maintenance cards
+  document.querySelectorAll('.maintenance-card').forEach(card => {
+    card.addEventListener('mouseenter', function(e) {
+      const title = this.dataset.maintenanceTitle;
+      const shiftName = this.dataset.shiftName;
+      const startTime = this.dataset.startTime ? this.dataset.startTime.substring(0, 5) : ''; // Format HH:MM
+      const endTime = this.dataset.endTime ? this.dataset.endTime.substring(0, 5) : ''; // Format HH:MM
+
+      tooltip.innerHTML = `
+        <div class="calendar-tooltip-title">Maintenance</div>
+        <div class="calendar-tooltip-content">
+          <div>Title: ${title}</div>
+          <div>Shift: ${shiftName}</div>
+          <div>Time: ${startTime} - ${endTime}</div>
+        </div>
+      `;
+
+      // Position tooltip near the cursor
+      tooltip.style.left = (e.pageX + 10) + 'px';
+      tooltip.style.top = (e.pageY + 10) + 'px';
+      tooltip.style.display = 'block';
+    });
+
+    card.addEventListener('mouseleave', function() {
+      tooltip.style.display = 'none';
+    });
+  });
 }
 
 // Fungsi untuk navigasi antar minggu
@@ -211,7 +399,16 @@ function navigateWeek(weeks) {
 
   currentDate = newDate;
   updateDateHeaders();
-  fetchCalendarData();
+
+  // No need to fetch shift definitions again if we already have them
+  if (shiftDefinitions.length > 0) {
+    fetchCalendarData();
+  } else {
+    fetchShiftDefinitions()
+      .then(() => {
+        fetchCalendarData();
+      });
+  }
 
   // Update prev button state
   const prevButton = document.getElementById('prevWeek');

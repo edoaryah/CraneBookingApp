@@ -1,11 +1,13 @@
 // Global variables for data
 let cranes = [];
 let hazards = [];
+let shiftDefinitions = [];
 
 // DOM Elements
 const startDateInput = document.getElementById('startDate');
 const endDateInput = document.getElementById('endDate');
 const shiftTableContainer = document.getElementById('shiftTableContainer');
+const shiftTableBody = document.getElementById('shiftTableBody');
 const submitButton = document.getElementById('submitButton');
 const craneIdSelect = document.getElementById('craneId');
 const hazardsContainer = document.getElementById('hazardsContainer');
@@ -23,10 +25,10 @@ endDateInput.value = '';
 
 // Load data on page load
 document.addEventListener('DOMContentLoaded', async function () {
-
   // Set user data from ViewData
   setUserData();
 
+  await loadShiftDefinitions();
   await loadCranes();
   await loadHazards();
   initLiftedItemsTable();
@@ -44,6 +46,30 @@ function setUserData() {
   // Set values to form fields
   document.getElementById('name').value = userName;
   document.getElementById('department').value = userDepartment;
+}
+
+// Fetch shift definitions from API
+async function loadShiftDefinitions() {
+  try {
+    const response = await fetch('/api/ShiftDefinitions');
+    if (!response.ok) {
+      throw new Error('Failed to load shift definitions');
+    }
+
+    shiftDefinitions = await response.json();
+
+    // Sort shift definitions by start time
+    shiftDefinitions.sort((a, b) => {
+      const timeA = a.startTime.split(':').map(Number);
+      const timeB = b.startTime.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    });
+
+    console.log('Loaded shift definitions:', shiftDefinitions);
+  } catch (error) {
+    console.error('Error loading shift definitions:', error);
+    alert('Failed to load shift definitions. Please refresh the page or contact support.');
+  }
 }
 
 // Fetch cranes from API
@@ -109,16 +135,16 @@ function populateHazardsCheckboxes() {
     col.className = 'col-md-4 mb-2';
 
     col.innerHTML = `
-            <div class="form-check">
-              <input class="form-check-input hazard-checkbox" type="checkbox"
-                     name="hazard-${hazard.id}"
-                     id="hazard-${hazard.id}"
-                     value="${hazard.id}" />
-              <label class="form-check-label" for="hazard-${hazard.id}">
-                ${hazard.name}
-              </label>
-            </div>
-          `;
+      <div class="form-check">
+        <input class="form-check-input hazard-checkbox" type="checkbox"
+               name="hazard-${hazard.id}"
+               id="hazard-${hazard.id}"
+               value="${hazard.id}" />
+        <label class="form-check-label" for="hazard-${hazard.id}">
+          ${hazard.name}
+        </label>
+      </div>
+    `;
 
     hazardsContainer.appendChild(col);
   });
@@ -180,8 +206,7 @@ function generateShiftTable() {
   while (currentDate <= end) {
     dateArray.push({
       date: new Date(currentDate).toISOString().split('T')[0],
-      isDayShift: false,
-      isNightShift: false
+      selectedShiftIds: []
     });
     currentDate.setDate(currentDate.getDate() + 1);
   }
@@ -190,27 +215,32 @@ function generateShiftTable() {
 }
 
 function renderShiftTable(shiftTable) {
-  if (!shiftTable || shiftTable.length === 0) {
-    shiftTableContainer.innerHTML = '<p>No shifts to display</p>';
+  if (!shiftTable || shiftTable.length === 0 || !shiftDefinitions || shiftDefinitions.length === 0) {
     shiftTableContainer.style.display = 'none';
     return;
   }
 
-  let tableHtml = `
-          <h6 class="mb-3">Shift Selection</h6>
-          <table class="shift-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Day Shift (7am-7pm)</th>
-                <th>Night Shift (7pm-7am)</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
+  // Get the table header
+  const tableHeader = shiftTableContainer.querySelector('thead tr');
 
-  shiftTable.forEach((shift, index) => {
-    const dateObj = new Date(shift.date);
+  // Clear existing headers except the first one (Date)
+  while (tableHeader.children.length > 1) {
+    tableHeader.removeChild(tableHeader.lastChild);
+  }
+
+  // Add column headers for each shift definition
+  shiftDefinitions.forEach(shift => {
+    const th = document.createElement('th');
+    th.textContent = shift.name;
+    tableHeader.appendChild(th);
+  });
+
+  // Clear existing table body
+  shiftTableBody.innerHTML = '';
+
+  // Add rows for each date
+  shiftTable.forEach((dayShift, index) => {
+    const dateObj = new Date(dayShift.date);
     const formattedDate = dateObj.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',
@@ -218,65 +248,64 @@ function renderShiftTable(shiftTable) {
       day: 'numeric'
     });
 
-    tableHtml += `
-            <tr data-date="${shift.date}">
-              <td>${formattedDate}</td>
-              <td>
-                <input type="checkbox" class="shift-checkbox day-shift"
-                  id="day-${shift.date}"
-                  data-date="${shift.date}"
-                  ${shift.isDayShift ? 'checked' : ''} />
-              </td>
-              <td>
-                <input type="checkbox" class="shift-checkbox night-shift"
-                  id="night-${shift.date}"
-                  data-date="${shift.date}"
-                  ${shift.isNightShift ? 'checked' : ''} />
-              </td>
-            </tr>
-          `;
+    const row = document.createElement('tr');
+    row.dataset.date = dayShift.date;
+
+    // Add date cell
+    const dateCell = document.createElement('td');
+    dateCell.textContent = formattedDate;
+    row.appendChild(dateCell);
+
+    // Add checkboxes for each shift definition
+    shiftDefinitions.forEach(shift => {
+      const isSelected = dayShift.selectedShiftIds.includes(shift.id);
+
+      const cell = document.createElement('td');
+      cell.innerHTML = `
+        <div class="form-check d-flex justify-content-center">
+          <input type="checkbox" class="form-check-input shift-checkbox"
+            id="shift-${shift.id}-${dayShift.date}"
+            data-date="${dayShift.date}"
+            data-shift-id="${shift.id}"
+            ${isSelected ? 'checked' : ''} />
+        </div>
+      `;
+
+      row.appendChild(cell);
+    });
+
+    shiftTableBody.appendChild(row);
   });
 
-  tableHtml += `
-            </tbody>
-          </table>
-        `;
-
-  shiftTableContainer.innerHTML = tableHtml;
+  // Show the table container
   shiftTableContainer.style.display = 'block';
 
   // Add event listeners to check for conflicts
   const craneId = document.getElementById('craneId').value;
   if (craneId) {
-    const dayShiftCheckboxes = document.querySelectorAll('.day-shift');
-    const nightShiftCheckboxes = document.querySelectorAll('.night-shift');
+    const shiftCheckboxes = document.querySelectorAll('.shift-checkbox');
 
-    dayShiftCheckboxes.forEach(checkbox => {
+    shiftCheckboxes.forEach(checkbox => {
       checkbox.addEventListener('change', function () {
-        checkShiftConflict(this, true, false);
-      });
-    });
-
-    nightShiftCheckboxes.forEach(checkbox => {
-      checkbox.addEventListener('change', function () {
-        checkShiftConflict(this, false, true);
+        checkShiftConflict(this);
       });
     });
   }
 }
 
 // Function to check for shift conflicts with the API
-async function checkShiftConflict(checkbox, isDayShift, isNightShift) {
+async function checkShiftConflict(checkbox) {
   const craneId = document.getElementById('craneId').value;
   if (!craneId) return;
 
   const date = checkbox.dataset.date;
+  const shiftId = parseInt(checkbox.dataset.shiftId);
   const isChecked = checkbox.checked;
 
   // Only check if the checkbox is being checked (not unchecked)
   if (isChecked) {
     try {
-      const response = await fetch(`/api/Bookings/CheckConflict?craneId=${craneId}&date=${date}&isDayShift=${isDayShift}&isNightShift=${isNightShift}`);
+      const response = await fetch(`/api/Bookings/CheckShiftConflict?craneId=${craneId}&date=${date}&shiftDefinitionId=${shiftId}`);
 
       if (!response.ok) {
         throw new Error('Failed to check conflict');
@@ -285,7 +314,9 @@ async function checkShiftConflict(checkbox, isDayShift, isNightShift) {
       const hasConflict = await response.json();
 
       if (hasConflict) {
-        alert(`There is already a booking for this crane on ${new Date(date).toLocaleDateString()} during the selected shift. Please select a different shift or crane.`);
+        // Find shift name for better error message
+        const shiftName = shiftDefinitions.find(s => s.id === shiftId)?.name || `Shift ${shiftId}`;
+        alert(`There is already a booking for this crane on ${new Date(date).toLocaleDateString()} during ${shiftName}. Please select a different shift or crane.`);
         checkbox.checked = false;
       }
     } catch (error) {
@@ -313,33 +344,77 @@ function initLiftedItemsTable() {
 }
 
 // Add a new row to the lifted items table
+// function addLiftedItemRow() {
+//   const tbody = document.getElementById('liftedItemsBody');
+//   const rowIndex = tbody.rows.length;
+
+//   const row = document.createElement('tr');
+
+//   row.innerHTML = `
+//     <td>
+//       <input type="text" class="form-control item-name" required />
+//     </td>
+//     <td>
+//       <input type="number" class="form-control item-height"
+//              min="0.01" step="0.01" required />
+//     </td>
+//     <td>
+//       <input type="number" class="form-control item-weight"
+//              min="0.01" step="0.01" required />
+//     </td>
+//     <td>
+//       <input type="number" class="form-control item-quantity"
+//              min="1" step="1" value="1" required />
+//     </td>
+//     <td class="text-center">
+//       <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
+//         <i class="bx bx-trash"></i>
+//       </button>
+//     </td>
+//   `;
+
+//   // Add event listener to remove button
+//   const removeBtn = row.querySelector('.remove-item-btn');
+//   removeBtn.addEventListener('click', function () {
+//     // Don't allow removing if it's the only row
+//     if (tbody.rows.length > 1) {
+//       row.remove();
+//     } else {
+//       alert('At least one item is required.');
+//     }
+//   });
+
+//   tbody.appendChild(row);
+// }
+// Add a new row to the lifted items table
 function addLiftedItemRow() {
   const tbody = document.getElementById('liftedItemsBody');
   const rowIndex = tbody.rows.length;
 
   const row = document.createElement('tr');
+
   row.innerHTML = `
-          <td>
-            <input type="text" class="form-control item-name" required />
-          </td>
-          <td>
-            <input type="number" class="form-control item-height"
-                   min="0.01" step="0.01" required />
-          </td>
-          <td>
-            <input type="number" class="form-control item-weight"
-                   min="0.01" step="0.01" required />
-          </td>
-          <td>
-            <input type="number" class="form-control item-quantity"
-                   min="1" step="1" value="1" required />
-          </td>
-          <td>
-            <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
-              <i class="bx bx-trash"></i>
-            </button>
-          </td>
-        `;
+    <td style="min-width: 250px;">
+      <input type="text" class="form-control item-name" required />
+    </td>
+    <td style="min-width: 130px;">
+      <input type="number" class="form-control item-height"
+             min="0.01" step="0.01" required />
+    </td>
+    <td style="min-width: 130px;">
+      <input type="number" class="form-control item-weight"
+             min="0.01" step="0.01" required />
+    </td>
+    <td style="min-width: 130px;">
+      <input type="number" class="form-control item-quantity"
+             min="1" step="1" value="1" required />
+    </td>
+    <td style="min-width: 60px;" class="text-center">
+      <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
+        <i class="bx bx-trash"></i>
+      </button>
+    </td>
+  `;
 
   // Add event listener to remove button
   const removeBtn = row.querySelector('.remove-item-btn');
@@ -347,6 +422,8 @@ function addLiftedItemRow() {
     // Don't allow removing if it's the only row
     if (tbody.rows.length > 1) {
       row.remove();
+    } else {
+      alert('At least one item is required.');
     }
   });
 
@@ -372,18 +449,20 @@ function collectFormData() {
 
   // Collect shift selections
   formData.shiftSelections = [];
-  const shiftRows = shiftTableContainer.querySelectorAll('tbody tr');
+  const shiftRows = shiftTableBody.querySelectorAll('tr');
 
   shiftRows.forEach(row => {
     const dateStr = row.dataset.date;
-    const dayShift = row.querySelector('.day-shift').checked;
-    const nightShift = row.querySelector('.night-shift').checked;
+    const checkboxes = row.querySelectorAll('.shift-checkbox:checked');
 
-    if (dayShift || nightShift) {
+    if (checkboxes.length > 0) {
+      const selectedShiftIds = Array.from(checkboxes).map(checkbox =>
+        parseInt(checkbox.dataset.shiftId)
+      );
+
       formData.shiftSelections.push({
         date: new Date(dateStr).toISOString(),
-        isDayShift: dayShift,
-        isNightShift: nightShift
+        selectedShiftIds: selectedShiftIds
       });
     }
   });
@@ -489,15 +568,27 @@ function validateForm() {
   }
 
   // Validate terms agreement
-  if (!document.getElementById('termsAgreement').checked) {
+  const termsAgreement1 = document.getElementById('termsAgreement1');
+  const termsAgreement2 = document.getElementById('termsAgreement2');
+  const termsAgreement3 = document.getElementById('termsAgreement3');
+
+  if (!termsAgreement1.checked || !termsAgreement2.checked || !termsAgreement3.checked) {
     isValid = false;
   }
 
   return isValid;
 }
 
+// Log form data for debugging
+function logFormData(formData) {
+  console.log('Submitting booking with data:', JSON.stringify(formData, null, 2));
+}
+
 // Submit booking
 async function submitBooking(formData) {
+  // Log form data for debugging
+  logFormData(formData);
+
   try {
     const response = await fetch('/api/Bookings', {
       method: 'POST',
@@ -537,5 +628,11 @@ submitButton.addEventListener('click', function () {
   if (validateForm()) {
     const formData = collectFormData();
     submitBooking(formData);
+  } else {
+    // Scroll to the first error message
+    const firstError = document.querySelector('.text-danger:not(:empty)');
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 });
