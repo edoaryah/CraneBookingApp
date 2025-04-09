@@ -12,6 +12,7 @@ const submitButton = document.getElementById('submitButton');
 const craneIdSelect = document.getElementById('craneId');
 const hazardsContainer = document.getElementById('hazardsContainer');
 const addItemBtn = document.getElementById('addItemBtn');
+const shiftLabel = document.getElementById('shiftLabel'); // Tambahkan ini
 
 // Set min date to today
 const today = new Date();
@@ -187,12 +188,14 @@ function generateShiftTable() {
   if (!startDate || !endDate) {
     // Hide the shift table if dates are not complete
     shiftTableContainer.style.display = 'none';
+    shiftLabel.style.display = 'none';
     return;
   }
 
   if (!validateDates()) {
     // Hide the shift table if dates are invalid
     shiftTableContainer.style.display = 'none';
+    shiftLabel.style.display = 'none';
     return;
   }
 
@@ -217,6 +220,7 @@ function generateShiftTable() {
 function renderShiftTable(shiftTable) {
   if (!shiftTable || shiftTable.length === 0 || !shiftDefinitions || shiftDefinitions.length === 0) {
     shiftTableContainer.style.display = 'none';
+    shiftLabel.style.display = 'none';
     return;
   }
 
@@ -279,6 +283,7 @@ function renderShiftTable(shiftTable) {
 
   // Show the table container
   shiftTableContainer.style.display = 'block';
+  shiftLabel.style.display = 'block';
 
   // Add event listeners to check for conflicts
   const craneId = document.getElementById('craneId').value;
