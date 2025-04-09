@@ -24,10 +24,6 @@
       border-bottom: 1px solid #ddd;
     }
 
-    .custom-hazard {
-      margin-top: 1rem;
-    }
-
     /* CSS untuk menjadikan kolom tombol trash fit content */
     #itemsTableContainer .table th:last-child,
     #itemsTableContainer .table td:last-child {
@@ -80,15 +76,35 @@
       justify-content: center;
       margin: 0;
     }
+
+    /* CSS for Hazards Card - matching Items Table style */
+    #hazardsCardContainer {
+      box-shadow: none !important;
+      border: 1px solid rgba(0, 0, 0, 0.125);
+      padding: 20px;
+    }
+
+    /* Add some better spacing for hazard checkboxes */
+    .hazard-checkbox {
+      margin-right: 5px;
+    }
+
+    /* Add some breathing room between rows of checkboxes */
+    #hazardsContainer .col-md-4 {
+      margin-bottom: 10px;
+    }
   </style>
 }
 
 <div class="row">
   <div class="col-12">
     <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Crane Booking Form</h5>
-        <small class="text-muted float-end">All fields marked with * are required</small>
+      <!-- Replace your current card-header with this -->
+      <div class="card-header">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center">
+          <h5 class="mb-0">Crane Booking Form</h5>
+          <small class="text-muted mt-1 mt-md-0">All fields marked with * are required</small>
+        </div>
       </div>
       <div class="card-body">
         <form id="craneBookingForm">
@@ -234,59 +250,66 @@
               </div>
             </div>
 
+            <!-- Replace the current hazards section with this code -->
             <div class="row mb-3">
-              <div class="col-12">
+              <div class="col-12 mb-6">
                 <label class="form-label required-label">Potential Hazards</label>
-                <div id="hazardsContainer" class="row">
-                  <!-- Hazards will be loaded dynamically -->
-                </div>
-                <div class="custom-hazard">
-                  <label class="form-label">Custom Hazard (Optional)</label>
-                  <input id="customHazard" name="customHazard" class="form-control"
-                    placeholder="Specify any other hazards not listed above" />
+                <div id="hazardsCardContainer" class="card">
+                  <div class="table-responsive">
+                    <div id="hazardsContainer" class="row">
+                      <!-- Hazards will be loaded dynamically -->
+                    </div>
+
+                    <div class="custom-hazard">
+                      <label class="form-label">Custom Hazard (Optional)</label>
+                      <input id="customHazard" name="customHazard" class="form-control"
+                        placeholder="Specify any other hazards not listed above" />
+                    </div>
+                  </div>
                 </div>
                 <span class="text-danger" id="hazardsError"></span>
               </div>
             </div>
-          </div>
 
-          <!-- Terms and Submission Section -->
-          <div class="form-section">
-            <h6 class="form-section-title">Requirements</h6>
-            <div class="row mb-3">
-              <div class="col-12">
-                <div class="form-check mb-2">
-                  <input id="termsAgreement1" class="form-check-input" type="checkbox" required />
-                  <label class="form-check-label required-label" for="termsAgreement1">
-                    Pengguna harus menyiapkan akses yang aman ke area kerja dan tempat kerja yang aman. Untuk bekerja
-                    pada malam hari, pengguna harus menyediakan penerangan yang cukup memadahi.
-                  </label>
+            <!-- Terms and Submission Section -->
+            <div class="form-section">
+              <h6 class="form-section-title">Requirements</h6>
+              <div class="row mb-6">
+                <div class="col-12">
+                  <div class="form-check mb-2">
+                    <input id="termsAgreement1" class="form-check-input" type="checkbox" required />
+                    <label class="form-check-label required-label" for="termsAgreement1">
+                      Pengguna harus menyiapkan akses yang aman ke area kerja dan tempat kerja yang aman. Untuk bekerja
+                      pada malam hari, pengguna harus menyediakan penerangan yang cukup memadahi.
+                    </label>
+                  </div>
+                  <div class="form-check mb-2">
+                    <input id="termsAgreement2" class="form-check-input" type="checkbox" required />
+                    <label class="form-check-label required-label" for="termsAgreement2">
+                      Penguna harus melengkapi izin yang sudah disetujui. Misalnya izin bekerja di dekat saluran
+                      listrik,
+                      Akses PIT dll dan pengguna harus memandu bila diperlukan untuk ke lokasi pekerjaan dan
+                      membantu mengawasi pekerjaan yang sedang berlangsung dan juga pengguna harus menginformasikan
+                      secara
+                      tertulis jika ada perubahan akses atau jalur yang akan dilalui.
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input id="termsAgreement3" class="form-check-input" type="checkbox" required />
+                    <label class="form-check-label required-label" for="termsAgreement3">
+                      Hanya pekerjaan yang sesuai denga persyaratan yang akan diproses.
+                    </label>
+                  </div>
                 </div>
-                <div class="form-check mb-2">
-                  <input id="termsAgreement2" class="form-check-input" type="checkbox" required />
-                  <label class="form-check-label required-label" for="termsAgreement2">
-                    Penguna harus melengkapi izin yang sudah disetujui. Misalnya izin bekerja di dekat saluran listrik,
-                    Akses PIT dll dan pengguna harus memandu bila diperlukan untuk ke lokasi pekerjaan dan
-                    membantu mengawasi pekerjaan yang sedang berlangsung dan juga pengguna harus menginformasikan secara
-                    tertulis jika ada perubahan akses atau jalur yang akan dilalui.
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input id="termsAgreement3" class="form-check-input" type="checkbox" required />
-                  <label class="form-check-label required-label" for="termsAgreement3">
-                    Hanya pekerjaan yang sesuai denga persyaratan yang akan diproses.
-                  </label>
+              </div>
+
+              <div class="row">
+                <div class="col-12 d-flex justify-content-between">
+                  <a href="/Calendar" class="btn btn-secondary">Cancel</a>
+                  <button type="button" id="submitButton" class="btn btn-primary">Submit Booking</button>
                 </div>
               </div>
             </div>
-
-            <div class="row">
-              <div class="col-12 d-flex justify-content-between">
-                <a href="/Calendar" class="btn btn-secondary">Cancel</a>
-                <button type="button" id="submitButton" class="btn btn-primary">Submit Booking</button>
-              </div>
-            </div>
-          </div>
         </form>
       </div>
     </div>
