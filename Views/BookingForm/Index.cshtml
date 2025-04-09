@@ -4,86 +4,83 @@
 }
 
 @section PageStyles {
-    <style>
-      .required-label:after {
-        content: " *";
-        color: red;
-      }
+  <style>
+    .required-label:after {
+      content: " *";
+      color: red;
+    }
 
-      .hazard-checkbox {
-        margin-right: 5px;
-      }
+    .hazard-checkbox {
+      margin-right: 5px;
+    }
 
-      .form-section {
-        margin-bottom: 2rem;
-      }
+    .form-section {
+      margin-bottom: 2rem;
+    }
 
-      .form-section-title {
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid #ddd;
-      }
+    .form-section-title {
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #ddd;
+    }
 
-      .custom-hazard {
-        margin-top: 1rem;
-      }
+    .custom-hazard {
+      margin-top: 1rem;
+    }
 
-      /* CSS untuk menjadikan kolom tombol trash fit content */
-      #itemsTableContainer .table th:last-child,
-      #itemsTableContainer .table td:last-child {
-        @* width: 1% !important; *@
-        white-space: nowrap !important;
-        @* padding-left: 10px; *@
-        padding-right: 20px;
-      }
+    /* CSS untuk menjadikan kolom tombol trash fit content */
+    #itemsTableContainer .table th:last-child,
+    #itemsTableContainer .table td:last-child {
+      white-space: nowrap !important;
+      padding-right: 20px;
+    }
 
-      #itemsTableContainer {
-        box-shadow: none !important;
-        border: 1px solid rgba(0, 0, 0, 0.125);
-      }
+    #itemsTableContainer {
+      box-shadow: none !important;
+      border: 1px solid rgba(0, 0, 0, 0.125);
+    }
 
-      #itemsTableContainer .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
-      }
+    #itemsTableContainer .card-header {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
 
-      /* Pastikan semua sel tabel memiliki border yang konsisten */
-      #itemsTableContainer .table th,
-      #itemsTableContainer .table td {
-        border-color: rgba(0, 0, 0, 0.125);
-      }
+    /* Pastikan semua sel tabel memiliki border yang konsisten */
+    #itemsTableContainer .table th,
+    #itemsTableContainer .table td {
+      border-color: rgba(0, 0, 0, 0.125);
+    }
 
-      /* CSS untuk Shift Selection table - mirip dengan items table */
-      #shiftTableContainer {
-        box-shadow: none !important;
-        border: 1px solid rgba(0, 0, 0, 0.125);
-      }
+    /* CSS untuk Shift Selection table - mirip dengan items table */
+    #shiftTableContainer {
+      box-shadow: none !important;
+      border: 1px solid rgba(0, 0, 0, 0.125);
+    }
 
-      #shiftTableContainer .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
-      }
+    #shiftTableContainer .card-header {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
 
-      /* Pastikan semua sel tabel memiliki border yang konsisten */
-      #shiftTableContainer .table th,
-      #shiftTableContainer .table td {
-        border-color: rgba(0, 0, 0, 0.125);
-      }
+    /* Pastikan semua sel tabel memiliki border yang konsisten */
+    #shiftTableContainer .table th,
+    #shiftTableContainer .table td {
+      border-color: rgba(0, 0, 0, 0.125);
+    }
 
-      /* Menambahkan CSS untuk center align kolom shift */
-      #shiftTableContainer .table th:not(:first-child),
-      #shiftTableContainer .table td:not(:first-child) {
-        text-align: center;
-      }
+    /* Menambahkan CSS untuk center align kolom shift */
+    #shiftTableContainer .table th:not(:first-child),
+    #shiftTableContainer .table td:not(:first-child) {
+      text-align: center;
+    }
 
-      /* Memastikan checkbox dalam tabel juga di tengah */
-      #shiftTableContainer .form-check {
-        display: flex;
-        justify-content: center;
-        margin: 0;
-      }
-
-    </style>
+    /* Memastikan checkbox dalam tabel juga di tengah */
+    #shiftTableContainer .form-check {
+      display: flex;
+      justify-content: center;
+      margin: 0;
+    }
+  </style>
 }
 
 <div class="row">
@@ -103,33 +100,33 @@
           <!-- Requestor Information Section -->
           <div class="form-section">
             <h6 class="form-section-title">Requestor Information</h6>
-            <div class="row">
-              <div class="col-md-6 mb-6">
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3 mb-md-0">
                 <label class="form-label required-label">Requestor Name</label>
                 <input id="name" name="name" class="form-control" required readonly />
                 <small class="text-muted">Automatically filled based on your login information</small>
               </div>
-              <div class="col-md-6 mb-6">
+              <div class="col-md-6">
                 <label class="form-label required-label">Department Name</label>
                 <input id="department" name="department" class="form-control" required readonly />
                 <small class="text-muted">Automatically filled based on your login information</small>
               </div>
             </div>
 
-            <div class="row">
-              <div class="col-md-6 mb-6">
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3 mb-md-0">
                 <label class="form-label required-label">Supervisor Name</label>
                 <input id="projectSupervisor" name="projectSupervisor" class="form-control" required />
               </div>
-              <div class="col-md-6 mb-6">
+              <div class="col-md-6">
                 <label class="form-label required-label">Phone Number</label>
                 <input id="phoneNumber" name="phoneNumber" class="form-control" placeholder="e.g. 081242005757"
                   required />
               </div>
             </div>
 
-            <div class="row">
-              <div class="col-md-6 mb-6">
+            <div class="row mb-3">
+              <div class="col-md-6">
                 <label class="form-label required-label">Cost Code</label>
                 <input id="costCode" name="costCode" class="form-control" required />
               </div>
@@ -139,36 +136,36 @@
           <!-- Booking Details Section -->
           <div class="form-section">
             <h6 class="form-section-title">Booking Details</h6>
-            <div class="row">
-              <div class="col-md-6 mb-6">
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3 mb-md-0">
                 <label for="startDate" class="form-label required-label">Start Date</label>
                 <input type="date" id="startDate" name="startDate" class="form-control" required />
                 <span class="text-danger" id="startDateError"></span>
               </div>
-              <div class="col-md-6 mb-6">
+              <div class="col-md-6">
                 <label for="endDate" class="form-label required-label">End Date</label>
                 <input type="date" id="endDate" name="endDate" class="form-control" required />
                 <span class="text-danger" id="endDateError"></span>
               </div>
             </div>
 
-            <div class="row ">
-              <div class="col-md-6 mb-6">
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3 mb-md-0">
                 <label class="form-label required-label">Crane</label>
                 <select id="craneId" name="craneId" class="form-select" required>
                   <option value="">Select a Crane</option>
                   <!-- Crane options will be loaded dynamically -->
                 </select>
               </div>
-              <div class="col-md-6 mb-6">
+              <div class="col-md-6">
                 <label class="form-label required-label">Location</label>
                 <input id="location" name="location" class="form-control" required />
               </div>
             </div>
 
             <!-- Shift Selection Table - Using newer template -->
-            <div class="row">
-              <div class="col-12 mb-6">
+            <div class="row mb-3">
+              <div class="col-12">
                 <label id="shiftLabel" class="form-label required-label" style="display: none;">Shift Selections</label>
                 <div id="shiftTableContainer" class="card" style="display: none;">
                   <div class="table-responsive text-nowrap">
@@ -188,21 +185,23 @@
                 <span class="text-danger" id="shiftTableError"></span>
               </div>
             </div>
+            <!-- Spacer div that shows when shift table is hidden -->
+            <div id="spacerDiv" class="mb-3" style="display: block;"></div>
           </div>
 
           <!-- Job Details Section -->
           <div class="form-section">
             <h6 class="form-section-title">Job Details</h6>
-            <div class="row">
-              <div class="col-12 mb-6">
+            <div class="row mb-3">
+              <div class="col-12">
                 <label class="form-label required-label">Job Description</label>
                 <textarea id="description" name="description" class="form-control" rows="3" required></textarea>
               </div>
             </div>
 
             <!-- Items to be Lifted Table - Kolom tombol trash fit content -->
-            <div class="row">
-              <div class="col-12 mb-6">
+            <div class="row mb-3">
+              <div class="col-12">
                 <label class="form-label required-label">Items to be Lifted</label>
                 <div id="itemsTableContainer" class="card">
                   <div class="table-responsive text-nowrap">
@@ -235,8 +234,8 @@
               </div>
             </div>
 
-            <div class="row">
-              <div class="col-12 mb-6">
+            <div class="row mb-3">
+              <div class="col-12">
                 <label class="form-label required-label">Potential Hazards</label>
                 <div id="hazardsContainer" class="row">
                   <!-- Hazards will be loaded dynamically -->
@@ -254,16 +253,16 @@
           <!-- Terms and Submission Section -->
           <div class="form-section">
             <h6 class="form-section-title">Requirements</h6>
-            <div class="row">
-              <div class="col-12 mb-6">
-                <div class="form-check">
+            <div class="row mb-3">
+              <div class="col-12">
+                <div class="form-check mb-2">
                   <input id="termsAgreement1" class="form-check-input" type="checkbox" required />
                   <label class="form-check-label required-label" for="termsAgreement1">
                     Pengguna harus menyiapkan akses yang aman ke area kerja dan tempat kerja yang aman. Untuk bekerja
                     pada malam hari, pengguna harus menyediakan penerangan yang cukup memadahi.
                   </label>
                 </div>
-                <div class="form-check">
+                <div class="form-check mb-2">
                   <input id="termsAgreement2" class="form-check-input" type="checkbox" required />
                   <label class="form-check-label required-label" for="termsAgreement2">
                     Penguna harus melengkapi izin yang sudah disetujui. Misalnya izin bekerja di dekat saluran listrik,
@@ -331,5 +330,5 @@
 </div>
 
 @section PageScripts {
-    <script src="~/js/booking-form/booking-form.js"></script>
+  <script src="~/js/booking-form/booking-form.js"></script>
 }

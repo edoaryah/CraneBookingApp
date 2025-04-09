@@ -13,6 +13,7 @@ const craneIdSelect = document.getElementById('craneId');
 const hazardsContainer = document.getElementById('hazardsContainer');
 const addItemBtn = document.getElementById('addItemBtn');
 const shiftLabel = document.getElementById('shiftLabel'); // Tambahkan ini
+const spacerDiv = document.getElementById('spacerDiv'); // Tambahkan ini
 
 // Set min date to today
 const today = new Date();
@@ -63,7 +64,7 @@ async function loadShiftDefinitions() {
     shiftDefinitions.sort((a, b) => {
       const timeA = a.startTime.split(':').map(Number);
       const timeB = b.startTime.split(':').map(Number);
-      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+      return timeA[0] * 60 + timeA[1] - (timeB[0] * 60 + timeB[1]);
     });
 
     console.log('Loaded shift definitions:', shiftDefinitions);
@@ -189,6 +190,7 @@ function generateShiftTable() {
     // Hide the shift table if dates are not complete
     shiftTableContainer.style.display = 'none';
     shiftLabel.style.display = 'none';
+    spacerDiv.style.display = 'block'; // Show spacer when shift table is hidden
     return;
   }
 
@@ -196,6 +198,7 @@ function generateShiftTable() {
     // Hide the shift table if dates are invalid
     shiftTableContainer.style.display = 'none';
     shiftLabel.style.display = 'none';
+    spacerDiv.style.display = 'block'; // Show spacer when shift table is hidden
     return;
   }
 
@@ -221,6 +224,7 @@ function renderShiftTable(shiftTable) {
   if (!shiftTable || shiftTable.length === 0 || !shiftDefinitions || shiftDefinitions.length === 0) {
     shiftTableContainer.style.display = 'none';
     shiftLabel.style.display = 'none';
+    spacerDiv.style.display = 'block'; // Show spacer when shift table is hidden
     return;
   }
 
@@ -284,6 +288,7 @@ function renderShiftTable(shiftTable) {
   // Show the table container
   shiftTableContainer.style.display = 'block';
   shiftLabel.style.display = 'block';
+  spacerDiv.style.display = 'none'; // Hide spacer when shift table is visible
 
   // Add event listeners to check for conflicts
   const craneId = document.getElementById('craneId').value;
@@ -310,7 +315,9 @@ async function checkShiftConflict(checkbox) {
   // Only check if the checkbox is being checked (not unchecked)
   if (isChecked) {
     try {
-      const response = await fetch(`/api/Bookings/CheckShiftConflict?craneId=${craneId}&date=${date}&shiftDefinitionId=${shiftId}`);
+      const response = await fetch(
+        `/api/Bookings/CheckShiftConflict?craneId=${craneId}&date=${date}&shiftDefinitionId=${shiftId}`
+      );
 
       if (!response.ok) {
         throw new Error('Failed to check conflict');
@@ -321,7 +328,9 @@ async function checkShiftConflict(checkbox) {
       if (hasConflict) {
         // Find shift name for better error message
         const shiftName = shiftDefinitions.find(s => s.id === shiftId)?.name || `Shift ${shiftId}`;
-        alert(`There is already a booking for this crane on ${new Date(date).toLocaleDateString()} during ${shiftName}. Please select a different shift or crane.`);
+        alert(
+          `There is already a booking for this crane on ${new Date(date).toLocaleDateString()} during ${shiftName}. Please select a different shift or crane.`
+        );
         checkbox.checked = false;
       }
     } catch (error) {
@@ -418,9 +427,7 @@ function collectFormData() {
     const checkboxes = row.querySelectorAll('.shift-checkbox:checked');
 
     if (checkboxes.length > 0) {
-      const selectedShiftIds = Array.from(checkboxes).map(checkbox =>
-        parseInt(checkbox.dataset.shiftId)
-      );
+      const selectedShiftIds = Array.from(checkboxes).map(checkbox => parseInt(checkbox.dataset.shiftId));
 
       formData.shiftSelections.push({
         date: new Date(dateStr).toISOString(),
@@ -506,12 +513,7 @@ function validateForm() {
     const weightInput = item.querySelector('.item-weight');
     const quantityInput = item.querySelector('.item-quantity');
 
-    if (
-      nameInput.value &&
-      heightInput.value &&
-      weightInput.value &&
-      quantityInput.value
-    ) {
+    if (nameInput.value && heightInput.value && weightInput.value && quantityInput.value) {
       hasValidItem = true;
       break;
     }
@@ -574,13 +576,13 @@ async function submitBooking(formData) {
     document.getElementById('craneBookingForm').reset();
     shiftTableContainer.style.display = 'none';
     initLiftedItemsTable();
-
   } catch (error) {
     console.error('Error submitting booking:', error);
 
     // Show error modal
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-    document.getElementById('errorModalBody').textContent = error.message || 'An error occurred while submitting your booking.';
+    document.getElementById('errorModalBody').textContent =
+      error.message || 'An error occurred while submitting your booking.';
     errorModal.show();
   }
 }
