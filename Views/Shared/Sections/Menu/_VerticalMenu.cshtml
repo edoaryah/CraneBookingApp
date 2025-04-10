@@ -65,6 +65,12 @@
         <div class="text-truncate" data-i18n="Crane">Crane</div>
       </a>
     </li>
+    <li class='menu-item@(currentPage == "/ShiftDefinition" ? " active" : "")'>
+      <a asp-controller="ShiftDefinition" asp-action="Index" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-time"></i>
+        <div class="text-truncate" data-i18n="ShiftDefinition">Shift Management</div>
+      </a>
+    </li>
     <li class='menu-item@(currentPage.StartsWith("/Forms") ? " active open" : "")'>
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-detail"></i>

@@ -10,7 +10,7 @@ let bookings = [];
 let cranes = [];
 
 // Initialize when the DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   loadBookingHistory();
 });
 
@@ -20,10 +20,7 @@ async function loadBookingHistory() {
 
   try {
     // Fetch both bookings and cranes in parallel
-    const [bookingsResponse, cranesResponse] = await Promise.all([
-      fetch('/api/Bookings'),
-      fetch('/api/Cranes')
-    ]);
+    const [bookingsResponse, cranesResponse] = await Promise.all([fetch('/api/Bookings'), fetch('/api/Cranes')]);
 
     if (!bookingsResponse.ok || !cranesResponse.ok) {
       throw new Error('Failed to fetch data');
@@ -51,7 +48,6 @@ async function loadBookingHistory() {
 
     bookings.forEach(booking => {
       const row = document.createElement('tr');
-      row.style.cursor = 'pointer';
 
       // Format dates
       const startDate = new Date(booking.startDate);
@@ -71,10 +67,29 @@ async function loadBookingHistory() {
         <td>${booking.department}</td>
         <td>${dateRange}</td>
         <td>${craneCode}</td>
+        <td>
+          <div class="dropdown">
+            <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+              <i class="bx bx-dots-vertical-rounded"></i>
+            </button>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" href="/BookingHistory/Details/${booking.id}">
+                <i class="bx bx-show-alt me-1"></i> View Details
+              </a>
+              <a class="dropdown-item" href="javascript:void(0);" onclick="event.stopPropagation();">
+                <i class="bx bx-edit-alt me-1"></i> Edit
+              </a>
+              <a class="dropdown-item" href="javascript:void(0);" onclick="event.stopPropagation();">
+                <i class="bx bx-trash me-1"></i> Delete
+              </a>
+            </div>
+          </div>
+        </td>
       `;
 
-      // Add click event
-      row.addEventListener('click', function() {
+      // Add click event to the entire row
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', function () {
         window.location.href = `/BookingHistory/Details/${booking.id}`;
       });
 
