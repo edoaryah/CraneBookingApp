@@ -3,41 +3,29 @@ const loadingIndicator = document.getElementById('loadingIndicator');
 const errorMessage = document.getElementById('errorMessage');
 const bookingDetailsForm = document.getElementById('bookingDetailsForm');
 const bookingNumber = document.getElementById('bookingNumber');
-const shiftTableContainer = document.getElementById('shiftTableContainer');
+const shiftTableContainer = document.getElementById('shiftTableContainer').querySelector('.table-responsive');
 const liftedItemsBody = document.getElementById('liftedItemsBody');
 const hazardsContainer = document.getElementById('hazardsContainer');
-
-// Global variables
-let bookingData = null;
-let craneData = null;
-let hazardsData = [];
+const customHazardContainer = document.getElementById('customHazardContainer');
+const customHazardText = document.getElementById('customHazardText');
 
 // Load booking details
 async function loadBookingDetails(id) {
   showLoading();
 
   try {
-    // Fetch booking details, crane data, and hazards in parallel
-    const [bookingResponse, cranesResponse, hazardsResponse] = await Promise.all([
-      fetch(`/api/Bookings/${id}`),
-      fetch('/api/Cranes'),
-      fetch('/api/Hazards')
-    ]);
+    // Fetch booking details only from the single API endpoint
+    const bookingResponse = await fetch(`/api/Bookings/${id}`);
 
-    if (!bookingResponse.ok || !cranesResponse.ok || !hazardsResponse.ok) {
-      throw new Error('Failed to fetch data');
+    if (!bookingResponse.ok) {
+      throw new Error('Failed to fetch booking data');
     }
 
-    // Process the responses
-    bookingData = await bookingResponse.json();
-    const cranes = await cranesResponse.json();
-    hazardsData = await hazardsResponse.json();
-
-    // Find the crane for this booking
-    craneData = cranes.find(c => c.id === bookingData.craneId);
+    // Process the response
+    const bookingData = await bookingResponse.json();
 
     // Populate the form
-    populateBookingDetails();
+    populateBookingDetails(bookingData);
 
     // Show the form
     showForm();
@@ -48,15 +36,15 @@ async function loadBookingDetails(id) {
 }
 
 // Populate booking details in the form
-function populateBookingDetails() {
+function populateBookingDetails(bookingData) {
   if (!bookingData) return;
 
   // Set booking number
   bookingNumber.textContent = bookingData.bookingNumber;
 
   // Basic information
-  document.getElementById('name').value = bookingData.name;
-  document.getElementById('department').value = bookingData.department;
+  document.getElementById('name').value = bookingData.name || '';
+  document.getElementById('department').value = bookingData.department || '';
   document.getElementById('projectSupervisor').value = bookingData.projectSupervisor || '';
   document.getElementById('phoneNumber').value = bookingData.phoneNumber || '';
   document.getElementById('costCode').value = bookingData.costCode || '';
@@ -67,80 +55,124 @@ function populateBookingDetails() {
   document.getElementById('startDate').value = formatDateForInput(startDate);
   document.getElementById('endDate').value = formatDateForInput(endDate);
 
-  // Crane information
-  document.getElementById('crane').value = craneData ? `${craneData.code} (${craneData.capacity} ton)` : 'Unknown';
+  // Crane information (using data directly from the booking)
+  document.getElementById('crane').value = bookingData.craneCode || '';
   document.getElementById('location').value = bookingData.location || '';
 
   // Job description
   document.getElementById('description').value = bookingData.description || '';
 
   // Generate shift table
-  generateShiftTable();
+  generateShiftTable(bookingData);
 
   // Populate items
-  populateItems();
+  populateItems(bookingData.items || []);
 
   // Populate hazards
-  populateHazards();
+  populateHazards(bookingData.selectedHazards || [], bookingData.customHazard);
 }
 
 // Generate shift table
-function generateShiftTable() {
+function generateShiftTable(bookingData) {
   if (!bookingData || !bookingData.shifts || bookingData.shifts.length === 0) {
-    shiftTableContainer.innerHTML = '<p class="text-muted">No shift information available</p>';
+    shiftTableContainer.innerHTML =
+      '<div class="p-3"><p class="text-muted mb-0">No shift information available</p></div>';
     return;
   }
 
-  // Create date range
+  // Group shifts by date
+  const shiftsByDate = {};
+
+  bookingData.shifts.forEach(shift => {
+    const dateStr = formatDateForInput(new Date(shift.date));
+
+    if (!shiftsByDate[dateStr]) {
+      shiftsByDate[dateStr] = [];
+    }
+
+    shiftsByDate[dateStr].push(shift);
+  });
+
+  // Get all unique shift definitions
+  const shiftDefinitions = [];
+  const shiftDefinitionIds = new Set();
+
+  bookingData.shifts.forEach(shift => {
+    if (!shiftDefinitionIds.has(shift.shiftDefinitionId)) {
+      shiftDefinitionIds.add(shift.shiftDefinitionId);
+      shiftDefinitions.push({
+        id: shift.shiftDefinitionId,
+        name: shift.shiftName,
+        startTime: shift.startTime,
+        endTime: shift.endTime
+      });
+    }
+  });
+
+  // Sort shift definitions by start time
+  shiftDefinitions.sort((a, b) => {
+    const timeA = a.startTime.split(':').map(Number);
+    const timeB = b.startTime.split(':').map(Number);
+    return timeA[0] * 60 + timeA[1] - (timeB[0] * 60 + timeB[1]);
+  });
+
+  // Create table HTML
+  let tableHtml = `
+    <table class="table table-hover mb-0">
+      <thead class="table-border-top-0">
+        <tr>
+          <th>Date</th>
+  `;
+
+  // Add column headers for each shift definition
+  shiftDefinitions.forEach(shift => {
+    tableHtml += `<th>${shift.name}</th>`;
+  });
+
+  tableHtml += `
+        </tr>
+      </thead>
+      <tbody class="table-border-bottom-0">
+  `;
+
+  // Create array of dates in the range
   const startDate = new Date(bookingData.startDate);
   const endDate = new Date(bookingData.endDate);
   const dateArray = [];
 
-  // Create array of dates in the range
   let currentDate = new Date(startDate);
   while (currentDate <= endDate) {
     dateArray.push(new Date(currentDate));
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
-  // Create table HTML
-  let tableHtml = `
-    <table class="shift-table">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Day Shift (7am-7pm)</th>
-          <th>Night Shift (7pm-7am)</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
   // Process each date
   dateArray.forEach(date => {
-    const dateString = formatDateForInput(date);
-    const shift = bookingData.shifts.find(s => formatDateForInput(new Date(s.date)) === dateString);
-
-    const dayShiftChecked = shift && shift.isDayShift;
-    const nightShiftChecked = shift && shift.isNightShift;
+    const dateStr = formatDateForInput(date);
+    const shiftsForDate = shiftsByDate[dateStr] || [];
+    const selectedShiftIds = shiftsForDate.map(s => s.shiftDefinitionId);
 
     const formattedDate = formatDate(date);
 
     tableHtml += `
       <tr>
         <td>${formattedDate}</td>
-        <td>
-          <span class="shift-indicator ${dayShiftChecked ? 'checked' : 'unchecked'}">
-            ${dayShiftChecked ? '✓' : ''}
-          </span>
-        </td>
-        <td>
-          <span class="shift-indicator ${nightShiftChecked ? 'checked' : 'unchecked'}">
-            ${nightShiftChecked ? '✓' : ''}
-          </span>
-        </td>
-      </tr>
     `;
+
+    // Add cells for each shift definition
+    shiftDefinitions.forEach(shift => {
+      const isSelected = selectedShiftIds.includes(shift.id);
+
+      tableHtml += `
+        <td>
+          <span class="shift-indicator ${isSelected ? 'checked' : 'unchecked'}">
+            ${isSelected ? '✓' : ''}
+          </span>
+        </td>
+      `;
+    });
+
+    tableHtml += `</tr>`;
   });
 
   tableHtml += `
@@ -152,53 +184,55 @@ function generateShiftTable() {
 }
 
 // Populate items to be lifted
-function populateItems() {
-  if (!bookingData || !bookingData.items || bookingData.items.length === 0) {
+function populateItems(items) {
+  if (!items || items.length === 0) {
     liftedItemsBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No items specified</td></tr>';
     return;
   }
 
   liftedItemsBody.innerHTML = '';
 
-  bookingData.items.forEach(item => {
+  items.forEach(item => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${item.itemName}</td>
-      <td>${item.height}</td>
-      <td>${item.weight}</td>
-      <td>${item.quantity}</td>
+      <td>${item.itemName || ''}</td>
+      <td>${item.height || ''}</td>
+      <td>${item.weight || ''}</td>
+      <td>${item.quantity || ''}</td>
     `;
     liftedItemsBody.appendChild(row);
   });
 }
 
 // Populate hazards
-function populateHazards() {
-  if ((!bookingData.selectedHazards || bookingData.selectedHazards.length === 0) &&
-      !bookingData.customHazard) {
-    hazardsContainer.innerHTML = '<p class="text-muted">No hazards specified</p>';
+function populateHazards(selectedHazards, customHazard) {
+  if ((!selectedHazards || selectedHazards.length === 0) && !customHazard) {
+    hazardsContainer.innerHTML = '<div class="col-12"><p class="text-muted">No hazards specified</p></div>';
+    customHazardContainer.style.display = 'none';
     return;
   }
 
-  let hazardsHtml = '';
+  hazardsContainer.innerHTML = '';
 
   // Selected hazards
-  if (bookingData.selectedHazards && bookingData.selectedHazards.length > 0) {
-    bookingData.selectedHazards.forEach(hazard => {
-      hazardsHtml += `<span class="hazard-badge">${hazard.name}</span>`;
+  if (selectedHazards && selectedHazards.length > 0) {
+    selectedHazards.forEach(hazard => {
+      const col = document.createElement('div');
+      col.className = 'col-md-4 mb-2';
+      col.innerHTML = `<span class="hazard-badge">${hazard.name}</span>`;
+      hazardsContainer.appendChild(col);
     });
+  } else {
+    hazardsContainer.innerHTML = '<div class="col-12"><p class="text-muted">No hazards selected</p></div>';
   }
 
   // Custom hazard
-  if (bookingData.customHazard) {
-    hazardsHtml += `
-      <div class="mt-2">
-        <strong>Custom Hazard:</strong> ${bookingData.customHazard}
-      </div>
-    `;
+  if (customHazard) {
+    customHazardText.textContent = customHazard;
+    customHazardContainer.style.display = 'block';
+  } else {
+    customHazardContainer.style.display = 'none';
   }
-
-  hazardsContainer.innerHTML = hazardsHtml;
 }
 
 // Format date for display (DD-MM-YYYY)
