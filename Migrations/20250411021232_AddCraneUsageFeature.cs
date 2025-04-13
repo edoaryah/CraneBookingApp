@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AspnetCoreMvcFull.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddCraneUsageFeature : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -57,6 +57,22 @@ namespace AspnetCoreMvcFull.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ShiftDefinitions", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UsageSubcategories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Category = table.Column<string>(type: "text", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    OldEnumName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UsageSubcategories", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -221,6 +237,35 @@ namespace AspnetCoreMvcFull.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CraneUsageRecords",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BookingId = table.Column<int>(type: "integer", nullable: false),
+                    Date = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    Category = table.Column<string>(type: "text", nullable: false),
+                    SubcategoryId = table.Column<int>(type: "integer", nullable: false),
+                    Duration = table.Column<TimeSpan>(type: "interval", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CraneUsageRecords", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CraneUsageRecords_Bookings_BookingId",
+                        column: x => x.BookingId,
+                        principalTable: "Bookings",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CraneUsageRecords_UsageSubcategories_SubcategoryId",
+                        column: x => x.SubcategoryId,
+                        principalTable: "UsageSubcategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MaintenanceScheduleShifts",
                 columns: table => new
                 {
@@ -286,6 +331,27 @@ namespace AspnetCoreMvcFull.Migrations
                     { 4, "Night Shift", new TimeSpan(0, 6, 0, 0, 0), true, "Malam (00:00-06:00)", new TimeSpan(0, 0, 0, 0, 0) }
                 });
 
+            migrationBuilder.InsertData(
+                table: "UsageSubcategories",
+                columns: new[] { "Id", "Category", "IsActive", "Name", "OldEnumName" },
+                values: new object[,]
+                {
+                    { 1, "Operating", true, "Pengangkatan", "Pengangkatan" },
+                    { 2, "Operating", true, "Menggantung Beban", "MenggantungBeban" },
+                    { 3, "Delay", true, "Menunggu User", "MenungguUser" },
+                    { 4, "Delay", true, "Menunggu Kesiapan Pengangkatan", "MenungguKesiapanPengangkatan" },
+                    { 5, "Delay", true, "Menunggu Pengawalan", "MenungguPengawalan" },
+                    { 6, "Standby", true, "Tidak Sedang Diperlukan", "TidakSedangDiperlukan" },
+                    { 7, "Standby", true, "Tidak Ada Operator", "TidakAdaOperator" },
+                    { 8, "Standby", true, "Tidak Ada Pengawal", "TidakAdaPengawal" },
+                    { 9, "Standby", true, "Istirahat", "Istirahat" },
+                    { 10, "Standby", true, "Ganti Shift", "GantiShift" },
+                    { 11, "Standby", true, "Tidak Bisa Lewat", "TidakBisaLewat" },
+                    { 12, "Service", true, "Servis Rutin Terjadwal", "ServisRutinTerjadwal" },
+                    { 13, "Breakdown", true, "Rusak", "Rusak" },
+                    { 14, "Breakdown", true, "Perbaikan", "Perbaikan" }
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_BookingHazards_BookingId",
                 table: "BookingHazards",
@@ -315,6 +381,16 @@ namespace AspnetCoreMvcFull.Migrations
                 name: "IX_BookingShifts_ShiftDefinitionId",
                 table: "BookingShifts",
                 column: "ShiftDefinitionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CraneUsageRecords_BookingId",
+                table: "CraneUsageRecords",
+                column: "BookingId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CraneUsageRecords_SubcategoryId",
+                table: "CraneUsageRecords",
+                column: "SubcategoryId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MaintenanceSchedules_CraneId",
@@ -350,6 +426,9 @@ namespace AspnetCoreMvcFull.Migrations
                 name: "BookingShifts");
 
             migrationBuilder.DropTable(
+                name: "CraneUsageRecords");
+
+            migrationBuilder.DropTable(
                 name: "MaintenanceScheduleShifts");
 
             migrationBuilder.DropTable(
@@ -360,6 +439,9 @@ namespace AspnetCoreMvcFull.Migrations
 
             migrationBuilder.DropTable(
                 name: "Bookings");
+
+            migrationBuilder.DropTable(
+                name: "UsageSubcategories");
 
             migrationBuilder.DropTable(
                 name: "MaintenanceSchedules");

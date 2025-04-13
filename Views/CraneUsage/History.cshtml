@@ -1,0 +1,175 @@
+@{
+  ViewData["Title"] = "Crane Usage History";
+  Layout = "_ContentNavbarLayout";
+}
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Crane Usage History</h5>
+  </div>
+
+  <!-- Loading indicator -->
+  <div id="loadingIndicator" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading usage history...</p>
+  </div>
+
+  <!-- Filters -->
+  <div class="card-body pt-0 pt-md-4" id="filtersContainer" style="display: none;">
+    <div class="row mb-3">
+      <div class="col-md-3 mb-2 mb-md-0">
+        <label for="craneFilter" class="form-label">Crane</label>
+        <select id="craneFilter" class="form-select">
+          <option value="">All Cranes</option>
+          <!-- Cranes will be loaded dynamically -->
+        </select>
+      </div>
+      <div class="col-md-3 mb-2 mb-md-0">
+        <label for="departmentFilter" class="form-label">Department</label>
+        <select id="departmentFilter" class="form-select">
+          <option value="">All Departments</option>
+          <!-- Departments will be loaded dynamically -->
+        </select>
+      </div>
+      <div class="col-md-3 mb-2 mb-md-0">
+        <label for="dateFrom" class="form-label">From Date</label>
+        <input type="date" id="dateFrom" class="form-control">
+      </div>
+      <div class="col-md-3 mb-2 mb-md-0">
+        <label for="dateTo" class="form-label">To Date</label>
+        <input type="date" id="dateTo" class="form-control">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-12 d-flex justify-content-end">
+        <button id="resetFiltersBtn" class="btn btn-outline-secondary me-2">Reset Filters</button>
+        <button id="applyFiltersBtn" class="btn btn-primary">Apply Filters</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Booking history table -->
+  <div class="table-responsive text-nowrap" id="bookingTableContainer" style="display: none;">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Booking #</th>
+          <th>Department</th>
+          <th>Crane</th>
+          <th>Date Range</th>
+          <th>Availability</th>
+          <th>Utilisation</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody class="table-border-bottom-0" id="bookingTableBody">
+        <!-- Will be filled dynamically -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- No data message -->
+  <div id="noDataMessage" class="text-center py-5" style="display: none;">
+    <i class="bx bx-time text-secondary mb-2" style="font-size: 3rem;"></i>
+    <p class="mb-0">No usage records found</p>
+  </div>
+
+  <!-- Error message -->
+  <div id="errorMessage" class="alert alert-danger mx-4 mb-4" style="display: none;">
+    An error occurred while loading data. Please try again later.
+  </div>
+</div>
+
+<!-- Crane Usage Summary Modal -->
+<div class="modal fade" id="usageSummaryModal" tabindex="-1" aria-labelledby="usageSummaryModalLabel"
+  aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="usageSummaryModalLabel">Crane Usage Summary</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <p><strong>Booking:</strong> <span id="modalBookingNumber"></span></p>
+            <p><strong>Department:</strong> <span id="modalDepartment"></span></p>
+            <p><strong>Crane:</strong> <span id="modalCrane"></span></p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Date Range:</strong> <span id="modalDateRange"></span></p>
+            <p><strong>Location:</strong> <span id="modalLocation"></span></p>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <div class="card mb-3">
+              <div class="card-body p-3">
+                <h6 class="card-title">Availability</h6>
+                <div class="d-flex align-items-center mb-2">
+                  <span id="modalAvailability" class="fs-4 fw-bold me-2">0%</span>
+                  <span class="text-muted">(Available Hours / Total Hours)</span>
+                </div>
+                <div class="progress" style="height: 20px;">
+                  <div id="modalAvailabilityBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card mb-3">
+              <div class="card-body p-3">
+                <h6 class="card-title">Utilisation</h6>
+                <div class="d-flex align-items-center mb-2">
+                  <span id="modalUtilisation" class="fs-4 fw-bold me-2">0%</span>
+                  <span class="text-muted">(Usage Hours / Available Hours)</span>
+                </div>
+                <div class="progress" style="height: 20px;">
+                  <div id="modalUtilisationBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Hours</th>
+                <th>Percentage</th>
+              </tr>
+            </thead>
+            <tbody id="modalCategoryTable">
+              <!-- Will be filled dynamically -->
+            </tbody>
+            <tfoot>
+              <tr class="table-active">
+                <th>Total</th>
+                <th id="modalTotalHours">0:00</th>
+                <th>100%</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="text-center mt-3">
+          <canvas id="modalChart" height="200"></canvas>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <a id="viewDetailsBtn" href="#" class="btn btn-primary">View Full Details</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section PageScripts {
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="~/js/crane-usage/crane-usage-history.js"></script>
+}

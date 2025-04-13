@@ -55,6 +55,12 @@
         <div class="text-truncate" data-i18n="Cards">Booking History</div>
       </a>
     </li>
+    <li class='menu-item@(currentPage == "/CraneUsage/History" ? " active" : "")'>
+      <a asp-controller="CraneUsage" asp-action="History" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-time"></i>
+        <div class="text-truncate" data-i18n="Cards">Crane Usage History</div>
+      </a>
+    </li>
 
     <!-- Management -->
     <li class="menu-header small text-uppercase"><span class="menu-header-text">Management</span></li>

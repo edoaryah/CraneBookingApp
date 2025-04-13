@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AspnetCoreMvcFull.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250404095620_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250411021232_AddCraneUsageFeature")]
+    partial class AddCraneUsageFeature
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -247,6 +247,39 @@ namespace AspnetCoreMvcFull.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.CraneUsageRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<TimeSpan>("Duration")
+                        .HasColumnType("interval");
+
+                    b.Property<int>("SubcategoryId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("SubcategoryId");
+
+                    b.ToTable("CraneUsageRecords");
+                });
+
             modelBuilder.Entity("AspnetCoreMvcFull.Models.Hazard", b =>
                 {
                     b.Property<int>("Id")
@@ -476,6 +509,149 @@ namespace AspnetCoreMvcFull.Migrations
                     b.ToTable("UrgentLogs");
                 });
 
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.UsageSubcategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("OldEnumName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UsageSubcategories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Category = "Operating",
+                            IsActive = true,
+                            Name = "Pengangkatan",
+                            OldEnumName = "Pengangkatan"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Category = "Operating",
+                            IsActive = true,
+                            Name = "Menggantung Beban",
+                            OldEnumName = "MenggantungBeban"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Category = "Delay",
+                            IsActive = true,
+                            Name = "Menunggu User",
+                            OldEnumName = "MenungguUser"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Category = "Delay",
+                            IsActive = true,
+                            Name = "Menunggu Kesiapan Pengangkatan",
+                            OldEnumName = "MenungguKesiapanPengangkatan"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Category = "Delay",
+                            IsActive = true,
+                            Name = "Menunggu Pengawalan",
+                            OldEnumName = "MenungguPengawalan"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Category = "Standby",
+                            IsActive = true,
+                            Name = "Tidak Sedang Diperlukan",
+                            OldEnumName = "TidakSedangDiperlukan"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Category = "Standby",
+                            IsActive = true,
+                            Name = "Tidak Ada Operator",
+                            OldEnumName = "TidakAdaOperator"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Category = "Standby",
+                            IsActive = true,
+                            Name = "Tidak Ada Pengawal",
+                            OldEnumName = "TidakAdaPengawal"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Category = "Standby",
+                            IsActive = true,
+                            Name = "Istirahat",
+                            OldEnumName = "Istirahat"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Category = "Standby",
+                            IsActive = true,
+                            Name = "Ganti Shift",
+                            OldEnumName = "GantiShift"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Category = "Standby",
+                            IsActive = true,
+                            Name = "Tidak Bisa Lewat",
+                            OldEnumName = "TidakBisaLewat"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Category = "Service",
+                            IsActive = true,
+                            Name = "Servis Rutin Terjadwal",
+                            OldEnumName = "ServisRutinTerjadwal"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Category = "Breakdown",
+                            IsActive = true,
+                            Name = "Rusak",
+                            OldEnumName = "Rusak"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Category = "Breakdown",
+                            IsActive = true,
+                            Name = "Perbaikan",
+                            OldEnumName = "Perbaikan"
+                        });
+                });
+
             modelBuilder.Entity("AspnetCoreMvcFull.Models.Booking", b =>
                 {
                     b.HasOne("AspnetCoreMvcFull.Models.Crane", "Crane")
@@ -534,6 +710,23 @@ namespace AspnetCoreMvcFull.Migrations
                     b.Navigation("Booking");
 
                     b.Navigation("ShiftDefinition");
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.CraneUsageRecord", b =>
+                {
+                    b.HasOne("AspnetCoreMvcFull.Models.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AspnetCoreMvcFull.Models.UsageSubcategory", null)
+                        .WithMany()
+                        .HasForeignKey("SubcategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("AspnetCoreMvcFull.Models.MaintenanceSchedule", b =>

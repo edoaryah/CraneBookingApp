@@ -46,6 +46,9 @@ builder.Services.AddScoped<IScheduleConflictService, ScheduleConflictService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IMaintenanceScheduleService, MaintenanceScheduleService>();
 builder.Services.AddScoped<ICraneService, CraneService>();
+// Tambahkan layanan baru
+builder.Services.AddScoped<IUsageSubcategoryService, UsageSubcategoryService>();
+builder.Services.AddScoped<ICraneUsageService, CraneUsageService>();
 
 // Konfigurasi Autentikasi
 builder.Services.AddAuthentication(options =>

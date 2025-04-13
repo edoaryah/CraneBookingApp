@@ -32,6 +32,10 @@ namespace AspnetCoreMvcFull.Data
 
     public DbSet<MaintenanceScheduleShift> MaintenanceScheduleShifts { get; set; }
 
+    public DbSet<UsageSubcategory> UsageSubcategories { get; set; }
+
+    public DbSet<CraneUsageRecord> CraneUsageRecords { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       base.OnModelCreating(modelBuilder);
@@ -110,10 +114,50 @@ namespace AspnetCoreMvcFull.Data
           .HasForeignKey(mss => mss.ShiftDefinitionId)
           .OnDelete(DeleteBehavior.Restrict);
 
+      // // Data/AppDbContext.cs - Add this to OnModelCreating method
+      // modelBuilder.Entity<CraneUsageRecord>()
+      //     .HasOne(cur => cur.Booking)
+      //     .WithMany()
+      //     .HasForeignKey(cur => cur.BookingId)
+      //     .OnDelete(DeleteBehavior.Cascade);
+
+      // // Configure Enum conversions for UsageCategory and UsageSubcategory
+      // modelBuilder.Entity<CraneUsageRecord>()
+      //     .Property(cur => cur.Category)
+      //     .HasConversion<string>();
+
+      // modelBuilder.Entity<CraneUsageRecord>()
+      //     .Property(cur => cur.Subcategory)
+      //     .HasConversion<string>();
+      // Data/AppDbContext.cs - Add this to OnModelCreating method
+      modelBuilder.Entity<CraneUsageRecord>()
+          .HasOne(cur => cur.Booking)
+          .WithMany()
+          .HasForeignKey(cur => cur.BookingId)
+          .OnDelete(DeleteBehavior.Cascade);
+
+      // Configure Enum conversions for UsageCategory
+      modelBuilder.Entity<CraneUsageRecord>()
+          .Property(cur => cur.Category)
+          .HasConversion<string>();
+
+      // Konfigurasi relasi UsageSubcategory
+      modelBuilder.Entity<UsageSubcategory>()
+          .Property(us => us.Category)
+          .HasConversion<string>();
+
+      // Konfigurasi relasi CraneUsageRecord dan UsageSubcategory
+      modelBuilder.Entity<CraneUsageRecord>()
+          .HasOne<UsageSubcategory>()
+          .WithMany()
+          .HasForeignKey(cur => cur.SubcategoryId)
+          .OnDelete(DeleteBehavior.Restrict);
+
       // Panggil seeders
       CraneSeeder.Seed(modelBuilder);
       HazardSeeder.Seed(modelBuilder);
       ShiftDefinitionSeeder.Seed(modelBuilder);
+      UsageSubcategorySeeder.Seed(modelBuilder);
     }
   }
 }
