@@ -1,0 +1,210 @@
+@{
+  ViewData["Title"] = "Role Users";
+  Layout = "_ContentNavbarLayout";
+}
+
+@section PageStyles {
+  <style>
+    .table th,
+    .table td {
+      vertical-align: middle;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: #696cff;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      margin-right: 0.75rem;
+    }
+  </style>
+}
+
+<!-- Content wrapper -->
+<div class="row">
+  <div class="col-12">
+    <!-- Users with Role -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="mb-0" id="roleTitle">Role Users</h5>
+          <span class="text-muted" id="roleDescription"></span>
+        </div>
+        <div>
+          <a href="/RoleManagement" class="btn btn-outline-secondary me-2">
+            <i class="bx bx-arrow-back me-1"></i> Back to Roles
+          </a>
+          <button type="button" class="btn btn-primary" id="addUserBtn">
+            <i class="bx bx-plus me-1"></i> Add User
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading indicator -->
+      <div id="loadingIndicator" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading users...</p>
+      </div>
+
+      <!-- User table -->
+      <div class="table-responsive text-nowrap" id="userTableContainer" style="display: none;">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Department</th>
+              <th>Position</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody class="table-border-bottom-0" id="userTableBody">
+            <!-- Will be filled dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- No data message -->
+      <div id="noDataMessage" class="text-center py-5" style="display: none;">
+        <i class="bx bx-user-x text-secondary mb-2" style="font-size: 3rem;"></i>
+        <p class="mb-0">No users found with this role</p>
+        <p class="text-muted">Start by adding a user to this role</p>
+      </div>
+
+      <!-- Error message -->
+      <div id="errorMessage" class="alert alert-danger mx-4 mb-4" style="display: none;">
+        An error occurred while loading users. Please try again later.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addUserModalLabel">Add User to Role</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Loading indicator -->
+        <div id="modalLoadingIndicator" class="text-center py-3">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2">Loading available users...</p>
+        </div>
+
+        <!-- Error message -->
+        <div id="modalErrorMessage" class="alert alert-danger" style="display: none;">
+          An error occurred. Please try again later.
+        </div>
+
+        <!-- Form -->
+        <form id="addUserForm" style="display: none;">
+          <div class="mb-3">
+            <label for="departmentFilter" class="form-label">Filter by Department</label>
+            <select class="form-select" id="departmentFilter">
+              <option value="">All Departments</option>
+              <!-- Options will be added dynamically -->
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="userSelect" class="form-label">User</label>
+            <select class="form-select" id="userSelect" required>
+              <option value="">Select a user</option>
+              <!-- Options will be added dynamically -->
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="userNotes" class="form-label">Notes (optional)</label>
+            <textarea class="form-control" id="userNotes" rows="3"
+              placeholder="Add notes about this user role assignment"></textarea>
+          </div>
+        </form>
+
+        <!-- No users message -->
+        <div id="noUsersMessage" class="alert alert-info" style="display: none;">
+          No eligible users found. All users already have this role.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveUserBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Notes Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editUserModalLabel">Edit User Notes</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editUserForm">
+          <input type="hidden" id="editUserRoleId">
+          <div class="mb-3">
+            <label for="editUserName" class="form-label">User</label>
+            <input type="text" class="form-control" id="editUserName" readonly>
+          </div>
+          <div class="mb-3">
+            <label for="editUserNotes" class="form-label">Notes</label>
+            <textarea class="form-control" id="editUserNotes" rows="3"
+              placeholder="Add notes about this user role assignment"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="updateUserBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Remove User Confirmation Modal -->
+<div class="modal fade" id="removeUserModal" tabindex="-1" aria-labelledby="removeUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="removeUserModalLabel">Remove User from Role</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to remove <strong id="removeUserName"></strong> from this role?</p>
+        <p>This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmRemoveBtn">Remove</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section PageScripts {
+  <script src="~/js/role-management/role-users.js"></script>
+  <script>
+    // Get role ID from ViewData
+    const roleId = @ViewData["RoleId"];
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function () {
+      loadRoleAndUsers(roleId);
+    });
+  </script>
+}

@@ -89,6 +89,13 @@
         <div class="text-truncate" data-i18n="ShiftDefinition">Shift Management</div>
       </a>
     </li>
+    <!-- Role Management menu item -->
+    <li class='menu-item@(currentPage == "/RoleManagement" ? " active" : "")'>
+      <a asp-controller="RoleManagement" asp-action="Index" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-shield"></i>
+        <div class="text-truncate" data-i18n="Roles">Role Management</div>
+      </a>
+    </li>
     @* <li class='menu-item@(currentPage.StartsWith("/Forms") ? " active open" : "")'>
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-detail"></i>

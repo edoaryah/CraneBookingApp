@@ -49,6 +49,7 @@ builder.Services.AddScoped<ICraneService, CraneService>();
 // Tambahkan layanan baru
 builder.Services.AddScoped<IUsageSubcategoryService, UsageSubcategoryService>();
 builder.Services.AddScoped<ICraneUsageService, CraneUsageService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 
 // Konfigurasi Autentikasi
 builder.Services.AddAuthentication(options =>

@@ -36,6 +36,10 @@ namespace AspnetCoreMvcFull.Data
 
     public DbSet<CraneUsageRecord> CraneUsageRecords { get; set; }
 
+    public DbSet<Role> Roles { get; set; }
+
+    public DbSet<UserRole> UserRoles { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       base.OnModelCreating(modelBuilder);
@@ -114,21 +118,6 @@ namespace AspnetCoreMvcFull.Data
           .HasForeignKey(mss => mss.ShiftDefinitionId)
           .OnDelete(DeleteBehavior.Restrict);
 
-      // // Data/AppDbContext.cs - Add this to OnModelCreating method
-      // modelBuilder.Entity<CraneUsageRecord>()
-      //     .HasOne(cur => cur.Booking)
-      //     .WithMany()
-      //     .HasForeignKey(cur => cur.BookingId)
-      //     .OnDelete(DeleteBehavior.Cascade);
-
-      // // Configure Enum conversions for UsageCategory and UsageSubcategory
-      // modelBuilder.Entity<CraneUsageRecord>()
-      //     .Property(cur => cur.Category)
-      //     .HasConversion<string>();
-
-      // modelBuilder.Entity<CraneUsageRecord>()
-      //     .Property(cur => cur.Subcategory)
-      //     .HasConversion<string>();
       // Data/AppDbContext.cs - Add this to OnModelCreating method
       modelBuilder.Entity<CraneUsageRecord>()
           .HasOne(cur => cur.Booking)
@@ -147,11 +136,40 @@ namespace AspnetCoreMvcFull.Data
           .HasConversion<string>();
 
       // Konfigurasi relasi CraneUsageRecord dan UsageSubcategory
-      modelBuilder.Entity<CraneUsageRecord>()
-          .HasOne<UsageSubcategory>()
-          .WithMany()
-          .HasForeignKey(cur => cur.SubcategoryId)
-          .OnDelete(DeleteBehavior.Restrict);
+      // Configure Role entity
+      modelBuilder.Entity<Role>(entity =>
+      {
+        entity.ToTable("Roles");
+        entity.HasKey(e => e.Id);
+        entity.Property(e => e.Name).IsRequired().HasMaxLength(50);
+        entity.Property(e => e.Description).HasMaxLength(255);
+        entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+        entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+
+        // Create a unique index on Name
+        entity.HasIndex(e => e.Name).IsUnique();
+      });
+
+      // Configure UserRole entity
+      modelBuilder.Entity<UserRole>(entity =>
+      {
+        entity.ToTable("UserRoles");
+        entity.HasKey(e => e.Id);
+        entity.Property(e => e.LdapUser).IsRequired().HasMaxLength(50);
+        entity.Property(e => e.Notes).HasMaxLength(255);
+        entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(100);
+        entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+
+        // Create a foreign key relationship with Role
+        entity.HasOne(e => e.Role)
+                  .WithMany(r => r.UserRoles)
+                  .HasForeignKey(e => e.RoleId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+        // Create a unique index on LdapUser + RoleId
+        entity.HasIndex(e => new { e.LdapUser, e.RoleId }).IsUnique();
+      });
+      // --------------------
 
       // Panggil seeders
       CraneSeeder.Seed(modelBuilder);
