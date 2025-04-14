@@ -1,6 +1,5 @@
 // Global variables for data
 let cranes = [];
-let hazards = [];
 let shiftDefinitions = [];
 
 // DOM Elements
@@ -10,10 +9,8 @@ const shiftTableContainer = document.getElementById('shiftTableContainer');
 const shiftTableBody = document.getElementById('shiftTableBody');
 const submitButton = document.getElementById('submitButton');
 const craneIdSelect = document.getElementById('craneId');
-const hazardsContainer = document.getElementById('hazardsContainer');
-const addItemBtn = document.getElementById('addItemBtn');
-const shiftLabel = document.getElementById('shiftLabel'); // Tambahkan ini
-const spacerDiv = document.getElementById('spacerDiv'); // Tambahkan ini
+const shiftLabel = document.getElementById('shiftLabel');
+const spacerDiv = document.getElementById('spacerDiv');
 
 // Set min date to today
 const today = new Date();
@@ -32,22 +29,15 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   await loadShiftDefinitions();
   await loadCranes();
-  await loadHazards();
-  initLiftedItemsTable();
-
-  // Add event listener for the add item button
-  addItemBtn.addEventListener('click', addLiftedItemRow);
 });
 
 // Set user data from ViewData
 function setUserData() {
   // Get values from hidden inputs
   const userName = document.getElementById('userName')?.value || '';
-  const userDepartment = document.getElementById('userDepartment')?.value || '';
 
   // Set values to form fields
-  document.getElementById('name').value = userName;
-  document.getElementById('department').value = userDepartment;
+  document.getElementById('createdBy').value = userName;
 }
 
 // Fetch shift definitions from API
@@ -109,46 +99,6 @@ function populateCraneDropdown() {
     }
 
     craneIdSelect.appendChild(option);
-  });
-}
-
-// Fetch hazards from API
-async function loadHazards() {
-  try {
-    const response = await fetch('/api/Hazards');
-    if (!response.ok) {
-      throw new Error('Failed to load hazards');
-    }
-
-    hazards = await response.json();
-    populateHazardsCheckboxes();
-  } catch (error) {
-    console.error('Error loading hazards:', error);
-    alert('Failed to load hazard data. Please refresh the page or contact support.');
-  }
-}
-
-// Populate hazards checkboxes
-function populateHazardsCheckboxes() {
-  hazardsContainer.innerHTML = '';
-
-  hazards.forEach(hazard => {
-    const col = document.createElement('div');
-    col.className = 'col-md-4 mb-2';
-
-    col.innerHTML = `
-      <div class="form-check">
-        <input class="form-check-input hazard-checkbox" type="checkbox"
-               name="hazard-${hazard.id}"
-               id="hazard-${hazard.id}"
-               value="${hazard.id}" />
-        <label class="form-check-label" for="hazard-${hazard.id}">
-          ${hazard.name}
-        </label>
-      </div>
-    `;
-
-    hazardsContainer.appendChild(col);
   });
 }
 
@@ -315,27 +265,8 @@ async function checkShiftConflict(checkbox) {
   // Only check if the checkbox is being checked (not unchecked)
   if (isChecked) {
     try {
-      const response = await fetch(
-        `/api/Bookings/CheckShiftConflict?craneId=${craneId}&date=${date}&shiftDefinitionId=${shiftId}`
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to check conflict');
-      }
-
-      const hasConflict = await response.json();
-
-      if (hasConflict) {
-        // Find shift name for better error message
-        const shiftName = shiftDefinitions.find(s => s.id === shiftId)?.name || `Shift ${shiftId}`;
-        alert(
-          `There is already a booking for this crane on ${new Date(date).toLocaleDateString()} during ${shiftName}. Please select a different shift or crane.`
-        );
-        checkbox.checked = false;
-        return;
-      }
-
-      // Then check conflict with other maintenance schedules
+      // Check conflict with other maintenance schedules only
+      // Maintenance is prioritized, so we don't need to check conflicts with bookings
       const maintenanceResponse = await fetch(
         `/api/MaintenanceSchedules/CheckShiftConflict?craneId=${craneId}&date=${date}&shiftDefinitionId=${shiftId}`
       );
@@ -371,72 +302,16 @@ craneIdSelect.addEventListener('change', function () {
   }
 });
 
-// Initialize the lifted items table with one row
-function initLiftedItemsTable() {
-  const tbody = document.getElementById('liftedItemsBody');
-  tbody.innerHTML = ''; // Clear existing rows
-  addLiftedItemRow();
-}
-
-// Add a new row to the lifted items table with button column fit content
-function addLiftedItemRow() {
-  const tbody = document.getElementById('liftedItemsBody');
-  const rowIndex = tbody.rows.length;
-
-  const row = document.createElement('tr');
-
-  row.innerHTML = `
-    <td style="min-width: 220px; padding-right: 5px;">
-      <input type="text" class="form-control item-name" required />
-    </td>
-    <td style="min-width: 140px; padding-right: 5px;">
-      <input type="number" class="form-control item-height"
-             min="0.01" step="0.01" required />
-    </td>
-    <td style="min-width: 140px; padding-right: 5px;">
-      <input type="number" class="form-control item-weight"
-             min="0.01" step="0.01" required />
-    </td>
-    <td style="min-width: 140px; padding-right: 5px;">
-      <input type="number" class="form-control item-quantity"
-             min="1" step="1" value="1" required />
-    </td>
-    <td style="width: 1%; white-space: nowrap;">
-      <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
-        <i class="bx bx-trash"></i>
-      </button>
-    </td>
-  `;
-
-  // Add event listener to remove button
-  const removeBtn = row.querySelector('.remove-item-btn');
-  removeBtn.addEventListener('click', function () {
-    // Don't allow removing if it's the only row
-    if (tbody.rows.length > 1) {
-      row.remove();
-    } else {
-      alert('At least one item is required.');
-    }
-  });
-
-  tbody.appendChild(row);
-}
-
 // Function to collect form data
 function collectFormData() {
   // Basic form data
   const formData = {
-    name: document.getElementById('name').value,
-    department: document.getElementById('department').value,
     craneId: parseInt(document.getElementById('craneId').value),
+    title: document.getElementById('title').value,
     startDate: new Date(document.getElementById('startDate').value).toISOString(),
     endDate: new Date(document.getElementById('endDate').value).toISOString(),
-    location: document.getElementById('location').value,
-    projectSupervisor: document.getElementById('projectSupervisor').value,
-    costCode: document.getElementById('costCode').value,
-    phoneNumber: document.getElementById('phoneNumber').value,
     description: document.getElementById('description').value,
-    customHazard: document.getElementById('customHazard').value || null
+    createdBy: document.getElementById('createdBy').value
   };
 
   // Collect shift selections
@@ -457,34 +332,6 @@ function collectFormData() {
     }
   });
 
-  // Collect items
-  formData.items = [];
-  const itemRows = document.querySelectorAll('#liftedItemsBody tr');
-
-  itemRows.forEach(row => {
-    const itemName = row.querySelector('.item-name').value;
-    const height = parseFloat(row.querySelector('.item-height').value);
-    const weight = parseFloat(row.querySelector('.item-weight').value);
-    const quantity = parseInt(row.querySelector('.item-quantity').value);
-
-    if (itemName && !isNaN(height) && !isNaN(weight) && !isNaN(quantity)) {
-      formData.items.push({
-        itemName,
-        height,
-        weight,
-        quantity
-      });
-    }
-  });
-
-  // Collect hazard IDs
-  formData.hazardIds = [];
-  const hazardCheckboxes = document.querySelectorAll('.hazard-checkbox:checked');
-
-  hazardCheckboxes.forEach(checkbox => {
-    formData.hazardIds.push(parseInt(checkbox.value));
-  });
-
   return formData;
 }
 
@@ -492,16 +339,17 @@ function collectFormData() {
 function validateForm() {
   let isValid = true;
   const shiftTableError = document.getElementById('shiftTableError');
-  const hazardsError = document.getElementById('hazardsError');
-  const liftedItemsError = document.getElementById('liftedItemsError');
 
   // Clear previous errors
   shiftTableError.textContent = '';
-  hazardsError.textContent = '';
-  liftedItemsError.textContent = '';
 
   // Validate dates
   if (!validateDates()) {
+    isValid = false;
+  }
+
+  // Validate title
+  if (!document.getElementById('title').value.trim()) {
     isValid = false;
   }
 
@@ -523,41 +371,8 @@ function validateForm() {
     }
   }
 
-  // Validate items (at least one complete item)
-  const items = document.querySelectorAll('#liftedItemsBody tr');
-  let hasValidItem = false;
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const nameInput = item.querySelector('.item-name');
-    const heightInput = item.querySelector('.item-height');
-    const weightInput = item.querySelector('.item-weight');
-    const quantityInput = item.querySelector('.item-quantity');
-
-    if (nameInput.value && heightInput.value && weightInput.value && quantityInput.value) {
-      hasValidItem = true;
-      break;
-    }
-  }
-
-  if (!hasValidItem) {
-    liftedItemsError.textContent = 'Please provide at least one item to be lifted';
-    isValid = false;
-  }
-
-  // Validate hazards
-  const selectedHazards = document.querySelectorAll('.hazard-checkbox:checked');
-  if (selectedHazards.length === 0) {
-    hazardsError.textContent = 'Please select at least one potential hazard';
-    isValid = false;
-  }
-
-  // Validate terms agreement
-  const termsAgreement1 = document.getElementById('termsAgreement1');
-  const termsAgreement2 = document.getElementById('termsAgreement2');
-  const termsAgreement3 = document.getElementById('termsAgreement3');
-
-  if (!termsAgreement1.checked || !termsAgreement2.checked || !termsAgreement3.checked) {
+  // Validate description
+  if (!document.getElementById('description').value.trim()) {
     isValid = false;
   }
 
@@ -566,16 +381,16 @@ function validateForm() {
 
 // Log form data for debugging
 function logFormData(formData) {
-  console.log('Submitting booking with data:', JSON.stringify(formData, null, 2));
+  console.log('Submitting maintenance schedule with data:', JSON.stringify(formData, null, 2));
 }
 
-// Submit booking
-async function submitBooking(formData) {
+// Submit maintenance schedule
+async function submitMaintenanceSchedule(formData) {
   // Log form data for debugging
   logFormData(formData);
 
   try {
-    const response = await fetch('/api/Bookings', {
+    const response = await fetch('/api/MaintenanceSchedules', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -586,7 +401,7 @@ async function submitBooking(formData) {
     if (!response.ok) {
       // Handle error responses from the server
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to create booking');
+      throw new Error(errorData.message || 'Failed to create maintenance schedule');
     }
 
     // Show success modal
@@ -594,16 +409,15 @@ async function submitBooking(formData) {
     successModal.show();
 
     // Reset form after successful submission
-    document.getElementById('craneBookingForm').reset();
+    document.getElementById('craneMaintenanceForm').reset();
     shiftTableContainer.style.display = 'none';
-    initLiftedItemsTable();
   } catch (error) {
-    console.error('Error submitting booking:', error);
+    console.error('Error submitting maintenance schedule:', error);
 
     // Show error modal
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
     document.getElementById('errorModalBody').textContent =
-      error.message || 'An error occurred while submitting your booking.';
+      error.message || 'An error occurred while submitting your maintenance schedule.';
     errorModal.show();
   }
 }
@@ -612,7 +426,7 @@ async function submitBooking(formData) {
 submitButton.addEventListener('click', function () {
   if (validateForm()) {
     const formData = collectFormData();
-    submitBooking(formData);
+    submitMaintenanceSchedule(formData);
   } else {
     // Scroll to the first error message
     const firstError = document.querySelector('.text-danger:not(:empty)');

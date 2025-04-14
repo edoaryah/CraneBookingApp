@@ -1,0 +1,202 @@
+@{
+  ViewData["Title"] = "Crane Maintenance Form";
+  Layout = "_ContentNavbarLayout";
+}
+
+@section PageStyles {
+  <style>
+    .required-label:after {
+      content: " *";
+      color: red;
+    }
+
+    .form-section {
+      margin-bottom: 2rem;
+    }
+
+    .form-section-title {
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #ddd;
+    }
+
+    /* CSS untuk Shift Selection table */
+    #shiftTableContainer {
+      box-shadow: none !important;
+      border: 1px solid rgba(0, 0, 0, 0.125);
+    }
+
+    #shiftTableContainer .card-header {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+
+    /* Pastikan semua sel tabel memiliki border yang konsisten */
+    #shiftTableContainer .table th,
+    #shiftTableContainer .table td {
+      border-color: rgba(0, 0, 0, 0.125);
+    }
+
+    /* Menambahkan CSS untuk center align kolom shift */
+    #shiftTableContainer .table th:not(:first-child),
+    #shiftTableContainer .table td:not(:first-child) {
+      text-align: center;
+    }
+
+    /* Memastikan checkbox dalam tabel juga di tengah */
+    #shiftTableContainer .form-check {
+      display: flex;
+      justify-content: center;
+      margin: 0;
+    }
+  </style>
+}
+
+<div class="row">
+  <div class="col-12">
+    <div class="card mb-4">
+      <div class="card-header">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center">
+          <h5 class="mb-0">Crane Maintenance Form</h5>
+          <small class="text-muted mt-1 mt-md-0">All fields marked with * are required</small>
+        </div>
+      </div>
+      <div class="card-body">
+        <form id="craneMaintenanceForm">
+
+          <!-- Hidden fields for user data -->
+          <input type="hidden" id="userName" value="@ViewData["UserName"]" />
+          <input type="hidden" id="userDepartment" value="@ViewData["UserDepartment"]" />
+
+          <!-- Maintenance Information Section -->
+          <div class="form-section">
+            <h6 class="form-section-title">Maintenance Information</h6>
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3 mb-md-0">
+                <label class="form-label required-label">Created By</label>
+                <input id="createdBy" name="createdBy" class="form-control" required readonly />
+                <small class="text-muted">Automatically filled based on your login information</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label required-label">Title</label>
+                <input id="title" name="title" class="form-control" required
+                  placeholder="e.g. Monthly Preventive Maintenance" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Maintenance Details Section -->
+          <div class="form-section">
+            <h6 class="form-section-title">Maintenance Details</h6>
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3 mb-md-0">
+                <label for="startDate" class="form-label required-label">Start Date</label>
+                <input type="date" id="startDate" name="startDate" class="form-control" required />
+                <span class="text-danger" id="startDateError"></span>
+              </div>
+              <div class="col-md-6">
+                <label for="endDate" class="form-label required-label">End Date</label>
+                <input type="date" id="endDate" name="endDate" class="form-control" required />
+                <span class="text-danger" id="endDateError"></span>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label required-label">Crane</label>
+                <select id="craneId" name="craneId" class="form-select" required>
+                  <option value="">Select a Crane</option>
+                  <!-- Crane options will be loaded dynamically -->
+                </select>
+              </div>
+            </div>
+
+            <!-- Shift Selection Table -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <label id="shiftLabel" class="form-label required-label" style="display: none;">Shift Selections</label>
+                <div id="shiftTableContainer" class="card" style="display: none;">
+                  <div class="table-responsive text-nowrap">
+                    <table class="table table-hover">
+                      <thead class="table-border-top-0">
+                        <tr>
+                          <th>Date</th>
+                          <!-- Shift columns will be added dynamically -->
+                        </tr>
+                      </thead>
+                      <tbody class="table-border-bottom-0" id="shiftTableBody">
+                        <!-- Shift rows will be added dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <span class="text-danger" id="shiftTableError"></span>
+              </div>
+            </div>
+            <!-- Spacer div that shows when shift table is hidden -->
+            <div id="spacerDiv" class="mb-3" style="display: block;"></div>
+          </div>
+
+          <!-- Maintenance Description Section -->
+          <div class="form-section">
+            <h6 class="form-section-title">Maintenance Description</h6>
+            <div class="row mb-3">
+              <div class="col-12">
+                <label class="form-label required-label">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="4" required
+                  placeholder="Describe the maintenance activities, procedures, and requirements..."></textarea>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-12 d-flex justify-content-between">
+                <a href="/Calendar" class="btn btn-secondary">Cancel</a>
+                <button type="button" id="submitButton" class="btn btn-primary">Submit Maintenance Schedule</button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="successModalLabel">Maintenance Schedule Successful</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Your crane maintenance schedule has been submitted successfully!
+      </div>
+      <div class="modal-footer">
+        <a href="/Calendar/Index" class="btn btn-primary">Go to Calendar</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Error modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="errorModalLabel">Maintenance Schedule Error</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="errorModalBody">
+        An error occurred while submitting your maintenance schedule.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section PageScripts {
+  <script src="~/js/maintenance-form/maintenance-form.js"></script>
+}

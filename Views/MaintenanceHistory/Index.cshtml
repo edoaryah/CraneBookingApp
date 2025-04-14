@@ -1,0 +1,57 @@
+@{
+  ViewData["Title"] = "Maintenance History";
+  Layout = "_ContentNavbarLayout";
+}
+
+<!-- Hoverable Table rows -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Maintenance History</h5>
+    <a href="/MaintenanceForm" class="btn btn-primary">
+      <i class="bx bx-plus me-1"></i> New Maintenance
+    </a>
+  </div>
+
+  <!-- Loading indicator -->
+  <div id="loadingIndicator" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading maintenance history...</p>
+  </div>
+
+  <!-- Maintenance history table -->
+  <div class="table-responsive text-nowrap" id="maintenanceTableContainer" style="display: none;">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Title</th>
+          <th>Created By</th>
+          <th>Date</th>
+          <th>Crane</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody class="table-border-bottom-0" id="maintenanceTableBody">
+        <!-- Will be filled dynamically -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- No data message -->
+  <div id="noDataMessage" class="text-center py-5" style="display: none;">
+    <i class="bx bx-calendar-x text-secondary mb-2" style="font-size: 3rem;"></i>
+    <p class="mb-0">No maintenance history found</p>
+  </div>
+
+  <!-- Error message -->
+  <div id="errorMessage" class="alert alert-danger mx-4 mb-4" style="display: none;">
+    An error occurred while loading maintenance history. Please try again later.
+  </div>
+</div>
+<!--/ Hoverable Table rows -->
+
+@section PageScripts {
+  <script src="~/js/maintenance-history/maintenance-history.js"></script>
+}

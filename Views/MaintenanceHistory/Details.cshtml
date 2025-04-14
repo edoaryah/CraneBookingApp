@@ -1,0 +1,204 @@
+@{
+  ViewData["Title"] = "Maintenance Details";
+  Layout = "_ContentNavbarLayout";
+}
+
+@section PageStyles {
+  <style>
+    .required-label:after {
+      content: " *";
+      color: red;
+    }
+
+    .form-section {
+      margin-bottom: 2rem;
+    }
+
+    .form-section-title {
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #ddd;
+    }
+
+    /* CSS untuk Shift Selection table */
+    #shiftTableContainer {
+      box-shadow: none !important;
+      border: 1px solid rgba(0, 0, 0, 0.125);
+    }
+
+    #shiftTableContainer .card-header {
+      background-color: #f8f9fa;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+
+    /* Pastikan semua sel tabel memiliki border yang konsisten */
+    #shiftTableContainer .table th,
+    #shiftTableContainer .table td {
+      border-color: rgba(0, 0, 0, 0.125);
+    }
+
+    /* Menambahkan CSS untuk center align kolom shift */
+    #shiftTableContainer .table th:not(:first-child),
+    #shiftTableContainer .table td:not(:first-child) {
+      text-align: center;
+    }
+
+    /* Memastikan checkbox dalam tabel juga di tengah */
+    #shiftTableContainer .form-check {
+      display: flex;
+      justify-content: center;
+      margin: 0;
+    }
+
+    /* Read-only form controls */
+    .form-control[readonly] {
+      background-color: #f8f9fa;
+      opacity: 1;
+    }
+
+    /* Shift indicator styling */
+    .shift-indicator {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      line-height: 20px;
+      text-align: center;
+      border-radius: 50%;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .shift-indicator.checked {
+      background-color: #696cff;
+    }
+
+    .shift-indicator.unchecked {
+      background-color: #d9d9d9;
+    }
+  </style>
+}
+
+<div class="row">
+  <div class="col-12">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="mb-0">Maintenance Details</h5>
+          <span id="maintenanceTitle" class="text-muted"></span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Loading indicator -->
+        <div id="loadingIndicator" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2">Loading maintenance details...</p>
+        </div>
+
+        <!-- Error message -->
+        <div id="errorMessage" class="alert alert-danger" style="display: none;">
+          Failed to load maintenance details. Please try again or go back to history.
+        </div>
+
+        <!-- Maintenance details form -->
+        <form id="maintenanceDetailsForm" style="display: none;">
+
+          <!-- Maintenance Information Section -->
+          <div class="form-section">
+            <h6 class="form-section-title">Maintenance Information</h6>
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3 mb-md-0">
+                <label class="form-label">Created By</label>
+                <input id="createdBy" name="createdBy" class="form-control" readonly />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Created At</label>
+                <input id="createdAt" name="createdAt" class="form-control" readonly />
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12">
+                <label class="form-label">Title</label>
+                <input id="title" name="title" class="form-control" readonly />
+              </div>
+            </div>
+          </div>
+
+          <!-- Maintenance Details Section -->
+          <div class="form-section">
+            <h6 class="form-section-title">Maintenance Details</h6>
+            <div class="row mb-3">
+              <div class="col-md-6 mb-3 mb-md-0">
+                <label class="form-label">Start Date</label>
+                <input type="date" id="startDate" name="startDate" class="form-control" readonly />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">End Date</label>
+                <input type="date" id="endDate" name="endDate" class="form-control" readonly />
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label">Crane</label>
+                <input id="crane" name="crane" class="form-control" readonly />
+              </div>
+            </div>
+
+            <!-- Shift Selection Table -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <label class="form-label">Shift Selections</label>
+                <div id="shiftTableContainer" class="card">
+                  <div class="table-responsive text-nowrap">
+                    <!-- Shift table will be generated here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Maintenance Description Section -->
+          <div class="form-section">
+            <h6 class="form-section-title">Maintenance Description</h6>
+            <div class="row mb-3">
+              <div class="col-12">
+                <label class="form-label">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="4" readonly></textarea>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-12 d-flex justify-content-start">
+                <a href="/MaintenanceHistory" class="btn btn-outline-secondary">
+                  <i class="bx bx-arrow-back me-1"></i> Back to History
+                </a>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section PageScripts {
+  <script src="~/js/maintenance-history/maintenance-details.js"></script>
+  <script>
+    // Get maintenance ID from ViewData
+    const maintenanceId = @ViewData["MaintenanceId"];
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function () {
+      if (maintenanceId) {
+        loadMaintenanceDetails(maintenanceId);
+      } else {
+        showError('Invalid maintenance ID');
+      }
+    });
+  </script>
+}

@@ -11,10 +11,10 @@
   <div
     class='app-brand demo @((@ViewData["navbarFull"] != null && Convert.ToBoolean(@ViewData["navbarFull"])) ? "d-xl-none" : "")'>
     <a asp-controller="Dashboards" asp-action="Index" class="app-brand-link">
-      <span class="app-brand-logo demo">
+      <span class="app-brand-logo">
         @await Html.PartialAsync("../_Partials/_Macros")
       </span>
-      <span class="app-brand-text demo menu-text fw-bold ms-2">@TempData.Peek("appName")</span>
+      @* <span class="app-brand-text demo menu-text fw-bold ms-2">@TempData.Peek("appName")</span> *@
     </a>
 
     <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none">
@@ -39,14 +39,20 @@
     </li>
     <li class='menu-item@(currentPage == "/Dashboards" ? " active" : "")'>
       <a asp-controller="Dashboards" asp-action="Index" class="menu-link">
-        <i class="menu-icon tf-icons bx bx-home-smile"></i>
+        <i class="menu-icon tf-icons bx bx-line-chart"></i>
         <div class="text-truncate" data-i18n="Cards">Dashboard</div>
       </a>
     </li>
     <li class='menu-item@(currentPage == "/BookingForm" ? " active" : "")'>
       <a asp-controller="BookingForm" asp-action="Index" class="menu-link">
         <i class="menu-icon tf-icons bx bx-detail"></i>
-        <div class="text-truncate" data-i18n="Cards">Bookings</div>
+        <div class="text-truncate" data-i18n="Cards">Booking Form</div>
+      </a>
+    </li>
+    <li class='menu-item@(currentPage == "/MaintenanceForm" ? " active" : "")'>
+      <a asp-controller="MaintenanceForm" asp-action="Index" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-detail"></i>
+        <div class="text-truncate" data-i18n="Cards">Maintenance Form</div>
       </a>
     </li>
     <li class='menu-item@(currentPage == "/BookingHistory" ? " active" : "")'>
@@ -55,10 +61,16 @@
         <div class="text-truncate" data-i18n="Cards">Booking History</div>
       </a>
     </li>
+    <li class='menu-item@(currentPage == "/MaintenanceHistory" ? " active" : "")'>
+      <a asp-controller="MaintenanceHistory" asp-action="Index" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-history"></i>
+        <div class="text-truncate" data-i18n="Cards">Maintenance History</div>
+      </a>
+    </li>
     <li class='menu-item@(currentPage == "/CraneUsage/History" ? " active" : "")'>
       <a asp-controller="CraneUsage" asp-action="History" class="menu-link">
         <i class="menu-icon tf-icons bx bx-time"></i>
-        <div class="text-truncate" data-i18n="Cards">Crane Usage History</div>
+        <div class="text-truncate" data-i18n="Cards">Crane Usage</div>
       </a>
     </li>
 
@@ -67,17 +79,17 @@
     <!-- Forms -->
     <li class='menu-item@(currentPage == "/CraneManagement" ? " active" : "")'>
       <a asp-controller="CraneManagement" asp-action="Index" class="menu-link">
-        <i class="menu-icon tf-icons bx bx-cube"></i>
-        <div class="text-truncate" data-i18n="Crane">Crane</div>
+        <i class="menu-icon tf-icons bx bx-cog"></i>
+        <div class="text-truncate" data-i18n="Crane">Crane Management</div>
       </a>
     </li>
     <li class='menu-item@(currentPage == "/ShiftDefinition" ? " active" : "")'>
       <a asp-controller="ShiftDefinition" asp-action="Index" class="menu-link">
-        <i class="menu-icon tf-icons bx bx-time"></i>
+        <i class="menu-icon tf-icons bx bx-cog"></i>
         <div class="text-truncate" data-i18n="ShiftDefinition">Shift Management</div>
       </a>
     </li>
-    <li class='menu-item@(currentPage.StartsWith("/Forms") ? " active open" : "")'>
+    @* <li class='menu-item@(currentPage.StartsWith("/Forms") ? " active open" : "")'>
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-detail"></i>
         <div>Form Elements</div>
@@ -94,8 +106,8 @@
           </a>
         </li>
       </ul>
-    </li>
-    <li class='menu-item@(currentPage.StartsWith("/FormLayouts") ? " active open" : "")'>
+    </li> *@
+    @* <li class='menu-item@(currentPage.StartsWith("/FormLayouts") ? " active open" : "")'>
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-detail"></i>
         <div>Form Layouts</div>
@@ -112,14 +124,14 @@
           </a>
         </li>
       </ul>
-    </li>
+    </li> *@
     <!-- Tables -->
-    <li class='menu-item@(currentPage == "/Tables/Basic" ? " active" : "")'>
+    @* <li class='menu-item@(currentPage == "/Tables/Basic" ? " active" : "")'>
       <a asp-controller="Tables" asp-action="Basic" class="menu-link">
         <i class="menu-icon tf-icons bx bx-table"></i>
         <div>Tables</div>
       </a>
-    </li>
+    </li> *@
   </ul>
 
 </aside>
