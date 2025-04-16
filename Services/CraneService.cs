@@ -12,24 +12,30 @@ namespace AspnetCoreMvcFull.Services
     private readonly AppDbContext _context;
     private readonly ILogger<CraneService> _logger;
     private readonly IEventPublisher _eventPublisher;
+    private readonly IFileStorageService _fileStorage;
+    private const string ContainerName = "cranes";
 
-    public CraneService(AppDbContext context, ILogger<CraneService> logger, IEventPublisher eventPublisher)
+    public CraneService(AppDbContext context, ILogger<CraneService> logger, IEventPublisher eventPublisher, IFileStorageService fileStorage)
     {
       _context = context;
       _logger = logger;
       _eventPublisher = eventPublisher;
+      _fileStorage = fileStorage;
     }
 
     public async Task<IEnumerable<CraneDto>> GetAllCranesAsync()
     {
-      var cranes = await _context.Cranes.ToListAsync();
+      var cranes = await _context.Cranes
+        .OrderBy(c => c.Code)
+        .ToListAsync();
 
       return cranes.Select(c => new CraneDto
       {
         Id = c.Id,
         Code = c.Code,
         Capacity = c.Capacity,
-        Status = c.Status
+        Status = c.Status,
+        ImagePath = c.ImagePath
       }).ToList();
     }
 
@@ -50,6 +56,7 @@ namespace AspnetCoreMvcFull.Services
         Code = crane.Code,
         Capacity = crane.Capacity,
         Status = crane.Status,
+        ImagePath = crane.ImagePath,
         UrgentLogs = crane.UrgentLogs?.Select(ul => new UrgentLogDto
         {
           Id = ul.Id,
@@ -102,6 +109,12 @@ namespace AspnetCoreMvcFull.Services
         Status = craneDto.Status ?? CraneStatus.Available
       };
 
+      // Upload gambar jika ada
+      if (craneDto.Image != null)
+      {
+        crane.ImagePath = await _fileStorage.SaveFileAsync(craneDto.Image, ContainerName);
+      }
+
       _context.Cranes.Add(crane);
       await _context.SaveChangesAsync();
 
@@ -110,7 +123,8 @@ namespace AspnetCoreMvcFull.Services
         Id = crane.Id,
         Code = crane.Code,
         Capacity = crane.Capacity,
-        Status = crane.Status
+        Status = crane.Status,
+        ImagePath = crane.ImagePath
       };
     }
 
@@ -123,6 +137,19 @@ namespace AspnetCoreMvcFull.Services
       if (existingCrane == null)
       {
         throw new KeyNotFoundException($"Crane with ID {id} not found");
+      }
+
+      // Update image if provided
+      if (updateDto.Crane.Image != null && updateDto.Crane.Image.Length > 0)
+      {
+        // Hapus gambar lama jika ada
+        if (!string.IsNullOrEmpty(existingCrane.ImagePath))
+        {
+          await _fileStorage.DeleteFileAsync(existingCrane.ImagePath, ContainerName);
+        }
+
+        // Upload gambar baru
+        existingCrane.ImagePath = await _fileStorage.SaveFileAsync(updateDto.Crane.Image, ContainerName);
       }
 
       // Update data selain status (Code, Capacity)
@@ -241,12 +268,56 @@ namespace AspnetCoreMvcFull.Services
       await _context.SaveChangesAsync();
     }
 
+    // Metode baru untuk update gambar saja
+    public async Task<bool> UpdateCraneImageAsync(int id, IFormFile image)
+    {
+      var crane = await _context.Cranes.FindAsync(id);
+      if (crane == null)
+      {
+        return false;
+      }
+
+      // Hapus gambar lama jika ada
+      if (!string.IsNullOrEmpty(crane.ImagePath))
+      {
+        await _fileStorage.DeleteFileAsync(crane.ImagePath, ContainerName);
+      }
+
+      // Upload gambar baru
+      crane.ImagePath = await _fileStorage.SaveFileAsync(image, ContainerName);
+
+      _context.Entry(crane).State = EntityState.Modified;
+      await _context.SaveChangesAsync();
+
+      return true;
+    }
+
+    // Metode untuk menghapus gambar crane
+    public async Task RemoveCraneImageAsync(int id)
+    {
+      var crane = await _context.Cranes.FindAsync(id);
+      if (crane == null)
+      {
+        throw new KeyNotFoundException($"Crane with ID {id} not found");
+      }
+
+      crane.ImagePath = null;
+      _context.Entry(crane).State = EntityState.Modified;
+      await _context.SaveChangesAsync();
+    }
+
     public async Task DeleteCraneAsync(int id)
     {
       var crane = await _context.Cranes.FindAsync(id);
       if (crane == null)
       {
         throw new KeyNotFoundException($"Crane with ID {id} not found");
+      }
+
+      // Hapus gambar jika ada
+      if (!string.IsNullOrEmpty(crane.ImagePath))
+      {
+        await _fileStorage.DeleteFileAsync(crane.ImagePath, ContainerName);
       }
 
       // Hapus semua UrgentLogs terkait

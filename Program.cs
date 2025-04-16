@@ -45,6 +45,8 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IScheduleConflictService, ScheduleConflictService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IMaintenanceScheduleService, MaintenanceScheduleService>();
+
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<ICraneService, CraneService>();
 // Tambahkan layanan baru
 builder.Services.AddScoped<IUsageSubcategoryService, UsageSubcategoryService>();

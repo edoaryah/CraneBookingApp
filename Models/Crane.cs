@@ -22,6 +22,9 @@ namespace AspnetCoreMvcFull.Models
     [Required]
     public CraneStatus Status { get; set; } = CraneStatus.Available;
 
+    // Properti baru untuk gambar
+    public string? ImagePath { get; set; }
+
     public ICollection<UrgentLog> UrgentLogs { get; set; } = new List<UrgentLog>();
   }
 }

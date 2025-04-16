@@ -8,6 +8,7 @@ namespace AspnetCoreMvcFull.DTOs
     public required string Code { get; set; }
     public int Capacity { get; set; }
     public CraneStatus Status { get; set; }
+    public string? ImagePath { get; set; }
   }
 
   public class CraneDetailDto
@@ -16,6 +17,7 @@ namespace AspnetCoreMvcFull.DTOs
     public required string Code { get; set; }
     public int Capacity { get; set; }
     public CraneStatus Status { get; set; }
+    public string? ImagePath { get; set; }
     public ICollection<UrgentLogDto> UrgentLogs { get; set; } = new List<UrgentLogDto>();
   }
 
@@ -24,6 +26,7 @@ namespace AspnetCoreMvcFull.DTOs
     public required string Code { get; set; }
     public int Capacity { get; set; }
     public CraneStatus? Status { get; set; }
+    public IFormFile? Image { get; set; }
   }
 
   // DTOs/CraneDto.cs - Update UrgentLogDto

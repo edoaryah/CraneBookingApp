@@ -12,5 +12,9 @@ namespace AspnetCoreMvcFull.Services
     Task DeleteCraneAsync(int id);
     Task ChangeCraneStatusToAvailableAsync(int craneId);
     Task<bool> CraneExistsAsync(int id);
+
+    // Tambahkan metode untuk update gambar
+    Task<bool> UpdateCraneImageAsync(int id, IFormFile image);
+    Task RemoveCraneImageAsync(int id);
   }
 }

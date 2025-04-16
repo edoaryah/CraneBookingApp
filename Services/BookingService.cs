@@ -155,8 +155,10 @@ namespace AspnetCoreMvcFull.Services
       var startDateLocal = startDate.Date;
       var endDateLocal = endDate.Date;
 
-      // Ambil semua crane
-      var cranes = await _context.Cranes.ToListAsync();
+      // Ambil semua crane (urut berdasarkan Code)
+      var cranes = await _context.Cranes
+          .OrderBy(c => c.Code)
+          .ToListAsync();
 
       // Siapkan response
       var response = new CalendarResponseDto

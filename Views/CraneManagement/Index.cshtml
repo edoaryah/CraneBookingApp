@@ -1,4 +1,4 @@
-@{
+@* @{
   ViewData["Title"] = "Crane Management";
   Layout = "_ContentNavbarLayout";
 }
@@ -285,6 +285,396 @@
     }
   </style>
 }
+
+@section PageScripts {
+  <script src="~/js/crane-management/crane-management.js"></script>
+} *@
+
+@{
+  ViewData["Title"] = "Crane Management";
+  Layout = "_ContentNavbarLayout";
+}
+
+@section PageStyles {
+  <style>
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 0.35em 0.65em;
+      border-radius: 0.25rem;
+      display: inline-flex;
+      align-items: center;
+      text-align: center;
+      white-space: nowrap;
+      vertical-align: baseline;
+    }
+
+    .status-available {
+      background-color: rgba(40, 199, 111, 0.1);
+      color: #28c76f;
+      border: 1px solid rgba(40, 199, 111, 0.2);
+    }
+
+    .status-maintenance {
+      background-color: rgba(255, 159, 67, 0.1);
+      color: #ff9f43;
+      border: 1px solid rgba(255, 159, 67, 0.2);
+    }
+
+    .crane-card {
+      transition: all 0.3s;
+    }
+
+    .crane-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0.25rem 1rem rgba(161, 172, 184, 0.45);
+    }
+
+    .maintenance-timer {
+      margin-top: 5px;
+      font-size: 0.85rem;
+    }
+
+    .action-buttons .btn {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .action-buttons .btn+.btn {
+      margin-left: 0.25rem;
+    }
+
+    .crane-image-container {
+      position: relative;
+      height: 160px;
+      background-color: #f5f5f9;
+      border-radius: 0.375rem 0.375rem 0 0;
+      overflow: hidden;
+    }
+
+    .crane-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .crane-image-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #8592a3;
+    }
+
+    .upload-image-btn {
+      position: absolute;
+      bottom: 0.5rem;
+      right: 0.5rem;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-image-btn:hover {
+      background-color: #fff;
+      box-shadow: 0 0.125rem 0.25rem rgba(161, 172, 184, 0.4);
+    }
+  </style>
+}
+
+<!-- Content wrapper -->
+<div class="row">
+  <div class="col-12">
+    <!-- Crane Management -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Crane Management</h5>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCraneModal">
+          <i class="bx bx-plus me-1"></i> Add Crane
+        </button>
+      </div>
+
+      <!-- Loading indicator -->
+      <div id="loadingIndicator" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading cranes...</p>
+      </div>
+
+      <!-- Crane cards -->
+      <div class="card-body" id="cranesContainer" style="display: none;">
+        <div class="row" id="craneCards">
+          <!-- Crane cards will be dynamically inserted here -->
+        </div>
+      </div>
+
+      <!-- No data message -->
+      <div id="noDataMessage" class="text-center py-5" style="display: none;">
+        <i class="bx bx-cube text-secondary mb-2" style="font-size: 3rem;"></i>
+        <p class="mb-0">No cranes found</p>
+        <p class="text-muted">Start by adding a new crane</p>
+      </div>
+
+      <!-- Error message -->
+      <div id="errorMessage" class="alert alert-danger mx-4 mb-4" style="display: none;">
+        An error occurred while loading cranes. Please try again later.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Crane Modal -->
+<div class="modal fade" id="addCraneModal" tabindex="-1" aria-labelledby="addCraneModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addCraneModalLabel">Add New Crane</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addCraneForm" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label for="addCraneImage" class="form-label">Crane Image</label>
+            <input type="file" class="form-control" id="addCraneImage" accept="image/*">
+            <small class="form-text text-muted">Max size: 5MB. Formats: JPG, PNG, GIF.</small>
+          </div>
+          <div class="mb-3">
+            <label for="addCraneCode" class="form-label">Crane Code</label>
+            <input type="text" class="form-control" id="addCraneCode" required>
+            <div class="invalid-feedback">Please enter a crane code.</div>
+          </div>
+          <div class="mb-3">
+            <label for="addCraneCapacity" class="form-label">Capacity (ton)</label>
+            <input type="number" class="form-control" id="addCraneCapacity" min="1" required>
+            <div class="invalid-feedback">Please enter a valid capacity.</div>
+          </div>
+          <div class="mb-3">
+            <label for="addCraneStatus" class="form-label">Status</label>
+            <select class="form-select" id="addCraneStatus" required>
+              <option value="0">Available</option>
+              <option value="1">Maintenance</option>
+            </select>
+          </div>
+
+          <!-- Maintenance fields (initially hidden) -->
+          <div id="addMaintenanceFields" style="display: none;">
+            <div class="alert alert-info">
+              <i class="bx bx-info-circle me-1"></i>
+              When setting a crane to Maintenance, you must provide maintenance details.
+            </div>
+            <div class="mb-3">
+              <label for="addMaintenanceDays" class="form-label">Estimated Days</label>
+              <input type="number" class="form-control" id="addMaintenanceDays" min="0" value="0">
+            </div>
+            <div class="mb-3">
+              <label for="addMaintenanceHours" class="form-label">Estimated Hours</label>
+              <input type="number" class="form-control" id="addMaintenanceHours" min="0" value="0">
+            </div>
+            <div class="mb-3">
+              <label for="addMaintenanceReasons" class="form-label">Maintenance Reasons</label>
+              <textarea class="form-control" id="addMaintenanceReasons" rows="3"></textarea>
+              <div class="invalid-feedback">Please provide maintenance reasons.</div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveNewCraneBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Crane Modal -->
+<div class="modal fade" id="editCraneModal" tabindex="-1" aria-labelledby="editCraneModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editCraneModalLabel">Edit Crane</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editCraneForm" enctype="multipart/form-data">
+          <input type="hidden" id="editCraneId">
+          <div class="mb-3">
+            <label for="editCraneImage" class="form-label">Crane Image</label>
+            <input type="file" class="form-control" id="editCraneImage" accept="image/*">
+            <small class="form-text text-muted">Max size: 5MB. Formats: JPG, PNG, GIF.</small>
+            <div id="editCraneImagePreview" class="mt-2" style="display: none;">
+              <img src="" alt="Current image" class="img-thumbnail" style="max-height: 100px;">
+              <div class="form-check mt-1">
+                <input class="form-check-input" type="checkbox" id="removeExistingImage">
+                <label class="form-check-label" for="removeExistingImage">
+                  Remove existing image
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="editCraneCode" class="form-label">Crane Code</label>
+            <input type="text" class="form-control" id="editCraneCode" required>
+            <div class="invalid-feedback">Please enter a crane code.</div>
+          </div>
+          <div class="mb-3">
+            <label for="editCraneCapacity" class="form-label">Capacity (ton)</label>
+            <input type="number" class="form-control" id="editCraneCapacity" min="1" required>
+            <div class="invalid-feedback">Please enter a valid capacity.</div>
+          </div>
+          <div class="mb-3">
+            <label for="editCraneStatus" class="form-label">Status</label>
+            <select class="form-select" id="editCraneStatus" required>
+              <option value="0">Available</option>
+              <option value="1">Maintenance</option>
+            </select>
+          </div>
+
+          <!-- Maintenance fields (initially hidden) -->
+          <div id="editMaintenanceFields" style="display: none;">
+            <div class="alert alert-info">
+              <i class="bx bx-info-circle me-1"></i>
+              When setting a crane to Maintenance, you must provide maintenance details.
+            </div>
+            <div class="mb-3">
+              <label for="editMaintenanceDays" class="form-label">Estimated Days</label>
+              <input type="number" class="form-control" id="editMaintenanceDays" min="0" value="0">
+            </div>
+            <div class="mb-3">
+              <label for="editMaintenanceHours" class="form-label">Estimated Hours</label>
+              <input type="number" class="form-control" id="editMaintenanceHours" min="0" value="0">
+            </div>
+            <div class="mb-3">
+              <label for="editMaintenanceReasons" class="form-label">Maintenance Reasons</label>
+              <textarea class="form-control" id="editMaintenanceReasons" rows="3"></textarea>
+              <div class="invalid-feedback">Please provide maintenance reasons.</div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="updateCraneBtn">Update</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteCraneModal" tabindex="-1" aria-labelledby="deleteCraneModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteCraneModalLabel">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the crane <strong id="deleteCraneCode"></strong>?</p>
+        <p class="text-danger">This action cannot be undone. All related bookings will also be affected.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Maintenance Log Modal -->
+<div class="modal fade" id="maintenanceLogModal" tabindex="-1" aria-labelledby="maintenanceLogModalLabel"
+  aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="maintenanceLogModalLabel">Maintenance History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h6 id="maintenanceLogCraneTitle"></h6>
+        <div id="maintenanceLogLoading" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <span class="ms-2">Loading maintenance logs...</span>
+        </div>
+        <div id="maintenanceLogContent">
+          <table class="table table-bordered" id="maintenanceLogTable">
+            <thead>
+              <tr>
+                <th>Start Date</th>
+                <th>Estimated End Date</th>
+                <th>Duration</th>
+                <th>Actual End Date</th>
+                <th>Reasons</th>
+              </tr>
+            </thead>
+            <tbody id="maintenanceLogTableBody">
+              <!-- Will be filled dynamically -->
+            </tbody>
+          </table>
+          <div id="noMaintenanceLogMessage" class="text-center py-3" style="display: none;">
+            <p class="text-muted mb-0">No maintenance logs found for this crane.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Image Modal -->
+<div class="modal fade" id="uploadImageModal" tabindex="-1" aria-labelledby="uploadImageModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="uploadImageModalLabel">Upload Crane Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="uploadImageForm" enctype="multipart/form-data">
+          <input type="hidden" id="uploadImageCraneId">
+          <div class="mb-3">
+            <label for="craneImage" class="form-label">Select Image</label>
+            <input type="file" class="form-control" id="craneImage" accept="image/*" required>
+            <div class="invalid-feedback">Please select an image file.</div>
+            <small class="form-text text-muted">Max size: 5MB. Formats: JPG, PNG, GIF.</small>
+          </div>
+          <div id="currentImageContainer" class="mb-3" style="display: none;">
+            <label class="form-label">Current Image</label>
+            <div>
+              <img id="currentImage" src="" alt="Current crane image" class="img-thumbnail" style="max-height: 150px;">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveImageBtn">Upload</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast for notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3">
+  <div id="notificationToast" class="toast align-items-center text-white bg-success border-0" role="alert"
+    aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        <!-- Toast message will be set dynamically -->
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+        aria-label="Close"></button>
+    </div>
+  </div>
+</div>
 
 @section PageScripts {
   <script src="~/js/crane-management/crane-management.js"></script>
