@@ -26,7 +26,7 @@ namespace AspnetCoreMvcFull.Controllers.Api
     /// <param name="model">Login credentials</param>
     /// <returns>Token JWT jika autentikasi berhasil</returns>
     [HttpPost("login")]
-    public async Task<ActionResult<AuthTokenResponse>> Login([FromBody] LoginRequest model)
+    public async Task<ActionResult<AuthTokenResponse>> Login([FromBody] LoginRequestDto model)
     {
       if (!ModelState.IsValid)
       {
@@ -47,7 +47,7 @@ namespace AspnetCoreMvcFull.Controllers.Api
           Success = true,
           Message = "Login successful",
           Token = response.Token,
-          User = new UserInfo
+          User = new UserInfoDto
           {
             EmpId = response.User.EmpId,
             Name = response.User.Name,

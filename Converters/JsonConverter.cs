@@ -22,7 +22,6 @@ namespace AspnetCoreMvcFull.Converters
 
     public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
     {
-      // Format hanya sampai detik: "yyyy-MM-ddTHH:mm:ssZ"
       writer.WriteStringValue(value.ToString("yyyy-MM-ddTHH:mm:ss"));
     }
   }

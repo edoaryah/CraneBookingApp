@@ -3,7 +3,7 @@ using AspnetCoreMvcFull.Filters;
 
 namespace AspnetCoreMvcFull.Controllers
 {
-  [RequireRole("msd")]
+  [RequireRole("pic")]
   [ServiceFilter(typeof(AuthorizationFilter))]
   public class MaintenanceFormController : Controller
   {

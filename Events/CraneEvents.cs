@@ -1,5 +1,3 @@
-using System;
-
 namespace AspnetCoreMvcFull.Events
 {
   public class CraneMaintenanceEvent

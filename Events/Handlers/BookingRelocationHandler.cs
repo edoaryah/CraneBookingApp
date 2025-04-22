@@ -1,8 +1,4 @@
-// Events/Handlers/BookingRelocateHandler.cs
-using System;
-using System.Threading.Tasks;
 using AspnetCoreMvcFull.Services;
-using Microsoft.Extensions.Logging;
 
 namespace AspnetCoreMvcFull.Events.Handlers
 {

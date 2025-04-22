@@ -93,8 +93,12 @@ async function loadBookingHistory() {
       // Add click event to the entire row
       row.style.cursor = 'pointer';
       row.addEventListener('click', function (e) {
-        // Only navigate if we didn't click on a dropdown item
-        if (!e.target.closest('.dropdown-item')) {
+        // Only navigate if we didn't click inside the dropdown or dropdown toggle button
+        if (
+          !e.target.closest('.dropdown') &&
+          !e.target.closest('.dropdown-menu') &&
+          !e.target.closest('.dropdown-toggle')
+        ) {
           window.location.href = `/BookingHistory/Details/${booking.id}`;
         }
       });

@@ -34,7 +34,7 @@ namespace AspnetCoreMvcFull.Controllers
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Login(LoginRequest model, string returnUrl = "/")
+    public async Task<IActionResult> Login(LoginRequestDto model, string returnUrl = "/")
     {
       ViewData["ReturnUrl"] = returnUrl;
 

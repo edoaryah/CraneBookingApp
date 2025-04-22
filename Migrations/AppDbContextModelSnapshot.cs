@@ -176,6 +176,46 @@ namespace AspnetCoreMvcFull.Migrations
                     b.ToTable("BookingShifts");
                 });
 
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.Breakdown", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ActualUrgentEndTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("CraneId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EstimatedUrgentDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EstimatedUrgentHours")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("HangfireJobId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reasons")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UrgentEndTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("UrgentStartTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CraneId");
+
+                    b.ToTable("Breakdowns");
+                });
+
             modelBuilder.Entity("AspnetCoreMvcFull.Models.Crane", b =>
                 {
                     b.Property<int>("Id")
@@ -510,46 +550,6 @@ namespace AspnetCoreMvcFull.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AspnetCoreMvcFull.Models.UrgentLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("ActualUrgentEndTime")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int>("CraneId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("EstimatedUrgentDays")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("EstimatedUrgentHours")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("HangfireJobId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Reasons")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UrgentEndTime")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("UrgentStartTime")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CraneId");
-
-                    b.ToTable("UrgentLogs");
-                });
-
             modelBuilder.Entity("AspnetCoreMvcFull.Models.UsageSubcategory", b =>
                 {
                     b.Property<int>("Id")
@@ -798,6 +798,17 @@ namespace AspnetCoreMvcFull.Migrations
                     b.Navigation("ShiftDefinition");
                 });
 
+            modelBuilder.Entity("AspnetCoreMvcFull.Models.Breakdown", b =>
+                {
+                    b.HasOne("AspnetCoreMvcFull.Models.Crane", "Crane")
+                        .WithMany("Breakdowns")
+                        .HasForeignKey("CraneId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Crane");
+                });
+
             modelBuilder.Entity("AspnetCoreMvcFull.Models.CraneUsageRecord", b =>
                 {
                     b.HasOne("AspnetCoreMvcFull.Models.Booking", "Booking")
@@ -839,17 +850,6 @@ namespace AspnetCoreMvcFull.Migrations
                     b.Navigation("ShiftDefinition");
                 });
 
-            modelBuilder.Entity("AspnetCoreMvcFull.Models.UrgentLog", b =>
-                {
-                    b.HasOne("AspnetCoreMvcFull.Models.Crane", "Crane")
-                        .WithMany("UrgentLogs")
-                        .HasForeignKey("CraneId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Crane");
-                });
-
             modelBuilder.Entity("AspnetCoreMvcFull.Models.UserRole", b =>
                 {
                     b.HasOne("AspnetCoreMvcFull.Models.Role", "Role")
@@ -872,7 +872,7 @@ namespace AspnetCoreMvcFull.Migrations
 
             modelBuilder.Entity("AspnetCoreMvcFull.Models.Crane", b =>
                 {
-                    b.Navigation("UrgentLogs");
+                    b.Navigation("Breakdowns");
                 });
 
             modelBuilder.Entity("AspnetCoreMvcFull.Models.MaintenanceSchedule", b =>

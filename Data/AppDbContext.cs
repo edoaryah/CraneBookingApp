@@ -23,9 +23,8 @@ namespace AspnetCoreMvcFull.Data
 
     public DbSet<Hazard> Hazards { get; set; }
 
-    public DbSet<UrgentLog> UrgentLogs { get; set; }
+    public DbSet<Breakdown> Breakdowns { get; set; }
 
-    // Tambahan untuk shift yang fleksibel
     public DbSet<ShiftDefinition> ShiftDefinitions { get; set; }
 
     public DbSet<MaintenanceSchedule> MaintenanceSchedules { get; set; }
@@ -49,10 +48,10 @@ namespace AspnetCoreMvcFull.Data
           .Property(c => c.Status)
           .HasConversion<string>(); // Konversi Enum ke string dalam database
 
-      // Relasi Crane dan UrgentLog
-      modelBuilder.Entity<UrgentLog>()
+      // Relasi Crane dan Breakdown
+      modelBuilder.Entity<Breakdown>()
           .HasOne(u => u.Crane)
-          .WithMany(c => c.UrgentLogs)
+          .WithMany(c => c.Breakdowns)
           .HasForeignKey(u => u.CraneId)
           .OnDelete(DeleteBehavior.Cascade);
 

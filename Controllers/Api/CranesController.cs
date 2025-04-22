@@ -40,12 +40,12 @@ namespace AspnetCoreMvcFull.Controllers.Api
       return Ok(crane);
     }
 
-    // GET: api/Cranes/5/UrgentLogs
-    [HttpGet("{id}/UrgentLogs")]
-    public async Task<ActionResult<IEnumerable<UrgentLogDto>>> GetCraneUrgentLogs(int id)
+    // GET: api/Cranes/5/Breakdowns
+    [HttpGet("{id}/Breakdowns")]
+    public async Task<ActionResult<IEnumerable<BreakdownDto>>> GetCraneBreakdowns(int id)
     {
-      var urgentLogs = await _craneService.GetCraneUrgentLogsAsync(id);
-      return Ok(urgentLogs);
+      var breakdowns = await _craneService.GetCraneBreakdownsAsync(id);
+      return Ok(breakdowns);
     }
 
     // POST: api/Cranes
@@ -58,7 +58,7 @@ namespace AspnetCoreMvcFull.Controllers.Api
 
     // PUT: api/Cranes/5
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutCrane(int id, [FromForm] CraneUpdateWithUrgentLogDto updateDto, [FromForm] bool? removeImage = false)
+    public async Task<IActionResult> PutCrane(int id, [FromForm] CraneUpdateWithBreakdownDto updateDto, [FromForm] bool? removeImage = false)
     {
       try
       {
