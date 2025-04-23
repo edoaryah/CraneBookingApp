@@ -383,6 +383,30 @@ namespace AspnetCoreMvcFull.Services
       }
     }
 
+    // Add this method to Services/CraneManagement/CraneService.cs class
+
+    public async Task<IEnumerable<BreakdownHistoryDto>> GetAllBreakdownsAsync()
+    {
+      var breakdowns = await _context.Breakdowns
+          .Include(b => b.Crane)
+          .OrderByDescending(b => b.UrgentStartTime)
+          .ToListAsync();
+
+      return breakdowns.Select(b => new BreakdownHistoryDto
+      {
+        Id = b.Id,
+        CraneId = b.CraneId,
+        CraneCode = b.Crane?.Code ?? "Unknown",
+        CraneCapacity = b.Crane?.Capacity ?? 0,
+        UrgentStartTime = b.UrgentStartTime,
+        UrgentEndTime = b.UrgentEndTime,
+        ActualUrgentEndTime = b.ActualUrgentEndTime,
+        EstimatedUrgentDays = b.EstimatedUrgentDays,
+        EstimatedUrgentHours = b.EstimatedUrgentHours,
+        Reasons = b.Reasons
+      }).ToList();
+    }
+
     public async Task<bool> CraneExistsAsync(int id)
     {
       return await _context.Cranes.AnyAsync(e => e.Id == id);

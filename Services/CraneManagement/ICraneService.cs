@@ -16,5 +16,8 @@ namespace AspnetCoreMvcFull.Services
     // Tambahkan metode untuk update gambar
     Task<bool> UpdateCraneImageAsync(int id, IFormFile image);
     Task RemoveCraneImageAsync(int id);
+
+    // New method for Breakdown History
+    Task<IEnumerable<BreakdownHistoryDto>> GetAllBreakdownsAsync();
   }
 }

@@ -1,0 +1,212 @@
+@{
+    ViewData["Title"] = "Breakdown History";
+    Layout = "_ContentNavbarLayout";
+}
+
+@section PageStyles
+{
+  <style>
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+        border-radius: 0.25rem;
+        display: inline-flex;
+        align-items: center;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+    }
+
+    .status-completed {
+        background-color: rgba(40, 199, 111, 0.1);
+        color: #28c76f;
+        border: 1px solid rgba(40, 199, 111, 0.2);
+    }
+
+    .status-ongoing {
+        background-color: rgba(255, 159, 67, 0.1);
+        color: #ff9f43;
+        border: 1px solid rgba(255, 159, 67, 0.2);
+    }
+
+    .status-overdue {
+        background-color: rgba(234, 84, 85, 0.1);
+        color: #ea5455;
+        border: 1px solid rgba(234, 84, 85, 0.2);
+    }
+
+    .filter-card {
+        margin-bottom: 1.5rem;
+    }
+
+    .breakdown-table th {
+        white-space: nowrap;
+    }
+  </style>
+}
+
+<!--Content wrapper-->
+<div class="row">
+  <div class="col-12">
+    <!--Breakdown History-->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Breakdown History</h5>
+        <div>
+          <button type="button" id="refreshBtn" class="btn btn-outline-primary">
+            <i class="bx bx-refresh me-1"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <!--Filters-->
+      <div class="card-body border-bottom">
+        <div class="row">
+          <div class="col-md-3 mb-3">
+            <label for="craneFilter" class="form-label">Crane</label>
+            <select id="craneFilter" class="form-select">
+              <option value="">All Cranes</option>
+              <!-- Will be filled dynamically -->
+            </select>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="statusFilter" class="form-label">Status</label>
+            <select id="statusFilter" class="form-select">
+              <option value="">All Status</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="dateFromFilter" class="form-label">From Date</label>
+            <input type="date" id="dateFromFilter" class="form-control">
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="dateToFilter" class="form-label">To Date</label>
+            <input type="date" id="dateToFilter" class="form-control">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12">
+            <button type="button" id="applyFiltersBtn" class="btn btn-primary me-2">
+              <i class="bx bx-filter-alt me-1"></i> Apply Filters
+            </button>
+            <button type="button" id="clearFiltersBtn" class="btn btn-outline-secondary">
+              <i class="bx bx-reset me-1"></i> Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!--Loading indicator-->
+      <div id="loadingIndicator" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading breakdown records...</p>
+      </div>
+
+      <!--Breakdown records-->
+      <div class="card-body" id="breakdownsContainer" style="display: none;">
+        <div class="table-responsive">
+          <table class="table table-bordered breakdown-table">
+            <thead>
+              <tr>
+                <th>Crane</th>
+                <th>Start Date</th>
+                <th>Estimated End Date</th>
+                <th>Duration</th>
+                <th>Actual End Date</th>
+                <th>Status</th>
+                <th>Reasons</th>
+              </tr>
+            </thead>
+            <tbody id="breakdownTableBody">
+              <!--Will be filled dynamically-->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!--No data message-->
+      <div id="noDataMessage" class="text-center py-5" style="display: none;">
+        <i class="bx bx-calendar-x text-secondary mb-2" style="font-size: 3rem;"></i>
+        <p class="mb-0">No breakdown records found</p>
+        <p class="text-muted">Try adjusting your filters or check back later</p>
+      </div>
+
+      <!--Error message-->
+      <div id="errorMessage" class="alert alert-danger mx-4 mb-4" style="display: none;">
+        An error occurred while loading breakdown records. Please try again later.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--Breakdown Detail Modal-->
+<div class="modal fade" id="breakdownDetailModal" tabindex="-1" aria-labelledby="breakdownDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="breakdownDetailModalLabel">Breakdown Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <h6>Crane Information</h6>
+            <p class="mb-1"><strong>Code:</strong> <span id="detailCraneCode"></span></p>
+            <p class="mb-1"><strong>Capacity:</strong> <span id="detailCraneCapacity"></span> ton</p>
+          </div>
+          <div class="col-md-6">
+            <h6>Breakdown Period</h6>
+            <p class="mb-1"><strong>Start Date:</strong> <span id="detailStartDate"></span></p>
+            <p class="mb-1"><strong>Estimated End Date:</strong> <span id="detailEndDate"></span></p>
+            <p class="mb-1"><strong>Actual End Date:</strong> <span id="detailActualEndDate"></span></p>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <h6>Duration</h6>
+            <p class="mb-1"><strong>Estimated:</strong> <span id="detailEstimatedDuration"></span></p>
+            <p class="mb-1"><strong>Actual:</strong> <span id="detailActualDuration"></span></p>
+          </div>
+          <div class="col-md-6">
+            <h6>Status</h6>
+            <p><span id="detailStatus" class="status-badge"></span></p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-12">
+            <h6>Maintenance Reasons</h6>
+            <p id="detailReasons"></p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--Toast for notifications-->
+<div class="toast-container position-fixed top-0 end-0 p-3">
+  <div id="notificationToast" class="toast align-items-center text-white bg-success border-0" role="alert"
+    aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        <!--Toast message will be set dynamically-->
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+        aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+@section PageScripts {
+  <script src="~/js/crane-management/breakdown-history.js"></script>
+}

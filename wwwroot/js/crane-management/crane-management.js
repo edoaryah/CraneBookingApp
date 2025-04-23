@@ -9,7 +9,6 @@ const errorMessage = document.getElementById('errorMessage');
 const addCraneModal = new bootstrap.Modal(document.getElementById('addCraneModal'));
 const editCraneModal = new bootstrap.Modal(document.getElementById('editCraneModal'));
 const deleteCraneModal = new bootstrap.Modal(document.getElementById('deleteCraneModal'));
-const maintenanceLogModal = new bootstrap.Modal(document.getElementById('maintenanceLogModal'));
 const uploadImageModal = new bootstrap.Modal(document.getElementById('uploadImageModal'));
 
 // Form Elements
@@ -124,7 +123,7 @@ function renderCraneCards() {
                 <i class="bx bx-trash"></i>
               </button>
               <button type="button" class="btn btn-sm btn-outline-info maintenance-log-btn"
-                      data-id="${crane.id}" data-code="${crane.code}" title="Maintenance Logs">
+                      data-id="${crane.id}" data-code="${crane.code}" title="Maintenance History">
                 <i class="bx bx-history"></i>
               </button>
             </div>
@@ -158,10 +157,12 @@ function renderCraneCards() {
   });
 
   document.querySelectorAll('.maintenance-log-btn').forEach(btn => {
-    btn.addEventListener('click', function () {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
       const craneId = parseInt(this.dataset.id);
-      const craneCode = this.dataset.code;
-      openMaintenanceLogModal(craneId, craneCode);
+      // Navigate to the breakdown history page with craneId parameter
+      window.location.href = `/BreakdownHistory?craneId=${craneId}`;
     });
   });
 
@@ -390,82 +391,6 @@ function openDeleteModal(craneId, craneCode) {
   deleteCraneModal.show();
 }
 
-// Open the maintenance log modal
-async function openMaintenanceLogModal(craneId, craneCode) {
-  document.getElementById('maintenanceLogCraneTitle').textContent = `Maintenance History for ${craneCode}`;
-  document.getElementById('maintenanceLogLoading').style.display = 'block';
-  document.getElementById('maintenanceLogTable').style.display = 'none';
-  document.getElementById('noMaintenanceLogMessage').style.display = 'none';
-
-  maintenanceLogModal.show();
-
-  try {
-    const response = await fetch(`/api/Cranes/${craneId}/Breakdowns`);
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch maintenance logs');
-    }
-
-    const logs = await response.json();
-    console.log('Maintenance logs received:', logs);
-
-    document.getElementById('maintenanceLogLoading').style.display = 'none';
-
-    if (logs.length === 0) {
-      document.getElementById('noMaintenanceLogMessage').style.display = 'block';
-      return;
-    }
-
-    const tableBody = document.getElementById('maintenanceLogTableBody');
-    tableBody.innerHTML = '';
-
-    logs.forEach(log => {
-      const startDate = new Date(log.urgentStartTime);
-      const endDate = new Date(log.urgentEndTime);
-      const actualEndDate = log.actualUrgentEndTime ? new Date(log.actualUrgentEndTime) : null;
-
-      const row = document.createElement('tr');
-
-      // Create each cell individually to ensure correct order
-      // Cell 1: Start Date
-      const startDateCell = document.createElement('td');
-      startDateCell.textContent = formatDateTime(startDate);
-      row.appendChild(startDateCell);
-
-      // Cell 2: Estimated End Date
-      const endDateCell = document.createElement('td');
-      endDateCell.textContent = formatDateTime(endDate);
-      row.appendChild(endDateCell);
-
-      // Cell 3: Duration
-      const durationCell = document.createElement('td');
-      durationCell.textContent = `${log.estimatedUrgentDays} days, ${log.estimatedUrgentHours} hours`;
-      row.appendChild(durationCell);
-
-      // Cell 4: Actual End Date
-      const actualEndDateCell = document.createElement('td');
-      actualEndDateCell.textContent = actualEndDate ? formatDateTime(actualEndDate) : 'N/A';
-      row.appendChild(actualEndDateCell);
-
-      // Cell 5: Reasons
-      const reasonsCell = document.createElement('td');
-      reasonsCell.textContent = log.reasons || 'No reason provided';
-      row.appendChild(reasonsCell);
-
-      tableBody.appendChild(row);
-    });
-
-    document.getElementById('maintenanceLogTable').style.display = 'table';
-  } catch (error) {
-    console.error('Error fetching maintenance logs:', error);
-    document.getElementById('maintenanceLogLoading').style.display = 'none';
-    document.getElementById('noMaintenanceLogMessage').style.display = 'block';
-    document.getElementById('noMaintenanceLogMessage').innerHTML = `
-      <p class="text-danger mb-0">Error loading maintenance logs. Please try again.</p>
-    `;
-  }
-}
-
 // Save a new crane
 async function saveNewCrane() {
   // Get form values
@@ -605,7 +530,7 @@ async function updateCrane() {
         return;
       }
 
-      // Add Breakdown data - PERBAIKAN DI SINI
+      // Add Breakdown data
       formData.append('Breakdown.UrgentStartTime', new Date().toISOString());
       formData.append('Breakdown.EstimatedUrgentDays', days);
       formData.append('Breakdown.EstimatedUrgentHours', hours);
