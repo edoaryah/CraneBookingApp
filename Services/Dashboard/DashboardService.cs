@@ -72,7 +72,7 @@ namespace AspnetCoreMvcFull.Services
           var maintenanceShifts = await _context.MaintenanceScheduleShifts
               .Include(ms => ms.MaintenanceSchedule)
               .Include(ms => ms.ShiftDefinition)
-              .Where(ms => ms.MaintenanceSchedule.CraneId == crane.Id &&
+              .Where(ms => ms.MaintenanceSchedule != null && ms.MaintenanceSchedule.CraneId == crane.Id &&
                           ms.Date.Date >= start && ms.Date.Date <= end)
               .ToListAsync();
 
@@ -80,14 +80,14 @@ namespace AspnetCoreMvcFull.Services
           var bookingShifts = await _context.BookingShifts
               .Include(bs => bs.Booking)
               .Include(bs => bs.ShiftDefinition)
-              .Where(bs => bs.Booking.CraneId == crane.Id &&
+              .Where(bs => bs.Booking != null && bs.Booking.CraneId == crane.Id &&
                           bs.Date.Date >= start && bs.Date.Date <= end)
               .ToListAsync();
 
           // Dapatkan records penggunaan crane
           var usageRecords = await _context.CraneUsageRecords
               .Include(r => r.Booking)
-              .Where(r => r.Booking.CraneId == crane.Id &&
+              .Where(r => r.Booking != null && r.Booking.CraneId == crane.Id &&
                         r.Date.Date >= start && r.Date.Date <= end)
               .ToListAsync();
 
@@ -97,32 +97,37 @@ namespace AspnetCoreMvcFull.Services
           double standbyHours = CalculateStandbyHours(bookingShifts, usageRecords);
 
           // Hitung waktu dari usage records
-          var usageTimeByCategory = usageRecords.GroupBy(r => r.Category)
+          var usageTimeByCategory = usageRecords
+              .Where(r => r != null) // Tidak perlu memeriksa r.Category karena enum tidak bisa null
+              .GroupBy(r => r.Category)
               .ToDictionary(g => g.Key, g => g.Sum(r => r.Duration.TotalHours));
 
-          // Dapatkan Operating dan Delay time dari records
-          double operatingHours = usageTimeByCategory.ContainsKey(UsageCategory.Operating)
-              ? usageTimeByCategory[UsageCategory.Operating] : 0;
+          // Dapatkan Operating dan Delay time dari records dengan TryGetValue yang lebih aman
+          double operatingHours = 0;
+          usageTimeByCategory.TryGetValue(UsageCategory.Operating, out operatingHours);
 
-          double delayHours = usageTimeByCategory.ContainsKey(UsageCategory.Delay)
-              ? usageTimeByCategory[UsageCategory.Delay] : 0;
+          double delayHours = 0;
+          usageTimeByCategory.TryGetValue(UsageCategory.Delay, out delayHours);
 
           // Jika ada waktu Breakdown dari usage records, tambahkan ke breakdownHours
-          if (usageTimeByCategory.ContainsKey(UsageCategory.Breakdown))
+          double bdHours = 0;
+          if (usageTimeByCategory.TryGetValue(UsageCategory.Breakdown, out bdHours))
           {
-            breakdownHours += usageTimeByCategory[UsageCategory.Breakdown];
+            breakdownHours += bdHours;
           }
 
           // Jika ada waktu Service dari usage records, tambahkan ke serviceHours
-          if (usageTimeByCategory.ContainsKey(UsageCategory.Service))
+          double servHours = 0;
+          if (usageTimeByCategory.TryGetValue(UsageCategory.Service, out servHours))
           {
-            serviceHours += usageTimeByCategory[UsageCategory.Service];
+            serviceHours += servHours;
           }
 
           // Jika ada waktu Standby dari usage records, tambahkan ke standbyHours
-          if (usageTimeByCategory.ContainsKey(UsageCategory.Standby))
+          double stbyHours = 0;
+          if (usageTimeByCategory.TryGetValue(UsageCategory.Standby, out stbyHours))
           {
-            standbyHours += usageTimeByCategory[UsageCategory.Standby];
+            standbyHours += stbyHours;
           }
 
           // Hitung waktu-waktu turunan
@@ -142,7 +147,7 @@ namespace AspnetCoreMvcFull.Services
           var craneMetric = new CraneMetricItemDto
           {
             CraneId = crane.Id,
-            CraneCode = crane.Code,
+            CraneCode = crane.Code ?? string.Empty,
             Capacity = crane.Capacity,
             Status = crane.Status,
             Metrics = new MetricValuesDto
@@ -188,10 +193,17 @@ namespace AspnetCoreMvcFull.Services
 
     private double CalculateBreakdownHours(List<Breakdown> breakdowns, DateTime start, DateTime end)
     {
+      if (breakdowns == null || !breakdowns.Any())
+      {
+        return 0;
+      }
+
       double totalHours = 0;
 
       foreach (var breakdown in breakdowns)
       {
+        if (breakdown == null) continue;
+
         // Tentukan waktu awal dan akhir yang berada dalam periode
         DateTime effectiveStart = breakdown.UrgentStartTime.Date < start ? start : breakdown.UrgentStartTime;
 
@@ -215,13 +227,25 @@ namespace AspnetCoreMvcFull.Services
 
     private double CalculateServiceHours(List<MaintenanceScheduleShift> maintenanceShifts)
     {
+      if (maintenanceShifts == null || !maintenanceShifts.Any())
+      {
+        return 0;
+      }
+
       double totalHours = 0;
 
       foreach (var shift in maintenanceShifts)
       {
-        // Durasi shift
-        TimeSpan startTime = shift.ShiftStartTime != default ? shift.ShiftStartTime : shift.ShiftDefinition?.StartTime ?? TimeSpan.Zero;
-        TimeSpan endTime = shift.ShiftEndTime != default ? shift.ShiftEndTime : shift.ShiftDefinition?.EndTime ?? TimeSpan.Zero;
+        if (shift == null) continue;
+
+        // Durasi shift dengan null safety
+        TimeSpan startTime = shift.ShiftStartTime != default
+            ? shift.ShiftStartTime
+            : (shift.ShiftDefinition != null ? shift.ShiftDefinition.StartTime : TimeSpan.Zero);
+
+        TimeSpan endTime = shift.ShiftEndTime != default
+            ? shift.ShiftEndTime
+            : (shift.ShiftDefinition != null ? shift.ShiftDefinition.EndTime : TimeSpan.Zero);
 
         double shiftHours;
         if (endTime < startTime) // Shift melewati tengah malam
@@ -241,14 +265,26 @@ namespace AspnetCoreMvcFull.Services
 
     private double CalculateStandbyHours(List<BookingShift> bookingShifts, List<CraneUsageRecord> usageRecords)
     {
+      if (bookingShifts == null || !bookingShifts.Any())
+      {
+        return 0;
+      }
+
       // Hitung total hours dari booking shifts
       double totalBookedHours = 0;
 
       foreach (var shift in bookingShifts)
       {
-        // Durasi shift
-        TimeSpan startTime = shift.ShiftStartTime != default ? shift.ShiftStartTime : shift.ShiftDefinition?.StartTime ?? TimeSpan.Zero;
-        TimeSpan endTime = shift.ShiftEndTime != default ? shift.ShiftEndTime : shift.ShiftDefinition?.EndTime ?? TimeSpan.Zero;
+        if (shift == null) continue;
+
+        // Durasi shift dengan null safety
+        TimeSpan startTime = shift.ShiftStartTime != default
+            ? shift.ShiftStartTime
+            : (shift.ShiftDefinition != null ? shift.ShiftDefinition.StartTime : TimeSpan.Zero);
+
+        TimeSpan endTime = shift.ShiftEndTime != default
+            ? shift.ShiftEndTime
+            : (shift.ShiftDefinition != null ? shift.ShiftDefinition.EndTime : TimeSpan.Zero);
 
         double shiftHours;
         if (endTime < startTime) // Shift melewati tengah malam
@@ -264,9 +300,15 @@ namespace AspnetCoreMvcFull.Services
       }
 
       // Hitung total jam utilized (Operating + Delay) dari usage records
-      double totalUtilizedHours = usageRecords
-          .Where(r => r.Category == UsageCategory.Operating || r.Category == UsageCategory.Delay)
-          .Sum(r => r.Duration.TotalHours);
+      double totalUtilizedHours = 0;
+
+      if (usageRecords != null && usageRecords.Any())
+      {
+        totalUtilizedHours = usageRecords
+            .Where(r => r != null &&
+                   (r.Category == UsageCategory.Operating || r.Category == UsageCategory.Delay))
+            .Sum(r => r.Duration.TotalHours);
+      }
 
       // Standby adalah selisih antara total booked hours dengan utilized hours
       return Math.Max(0, totalBookedHours - totalUtilizedHours);
