@@ -49,6 +49,7 @@ builder.Services.AddScoped<IMaintenanceScheduleService, MaintenanceScheduleServi
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<ICraneService, CraneService>();
 // Tambahkan layanan baru
+builder.Services.AddScoped<IUsageCategoryService, UsageCategoryService>();
 builder.Services.AddScoped<IUsageSubcategoryService, UsageSubcategoryService>();
 builder.Services.AddScoped<ICraneUsageService, CraneUsageService>();
 builder.Services.AddScoped<IRoleService, RoleService>();

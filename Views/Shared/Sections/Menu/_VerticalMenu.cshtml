@@ -142,6 +142,18 @@
         <div class="text-truncate" data-i18n="Roles">Role Management</div>
       </a>
     </li>
+    <li class='menu-item@(currentPage == "/Hazard" ? " active" : "")'>
+      <a asp-controller="Hazard" asp-action="Index" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-error-circle"></i>
+        <div class="text-truncate" data-i18n="Hazard">Hazard Management</div>
+      </a>
+    </li>
+    <li class='menu-item@(currentPage == "/UsageSubcategory" ? " active" : "")'>
+      <a asp-controller="UsageSubcategory" asp-action="Index" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-category"></i>
+        <div class="text-truncate" data-i18n="UsageSubcategory">Usage Subcategories</div>
+      </a>
+    </li>
     @* <li class='menu-item@(currentPage.StartsWith("/Forms") ? " active open" : "")'>
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-detail"></i>
