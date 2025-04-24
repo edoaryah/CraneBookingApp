@@ -1,5 +1,3 @@
-// [Controllers/BookingHistoryController.cs]
-// Penambahan action Approved untuk PIC.
 using Microsoft.AspNetCore.Mvc;
 using AspnetCoreMvcFull.Filters;
 
@@ -15,7 +13,7 @@ namespace AspnetCoreMvcFull.Controllers
 
     public IActionResult Details(int id)
     {
-      ViewData["BookingId"] = id;
+      ViewData["id"] = id;
       return View();
     }
 

@@ -29,12 +29,12 @@ namespace AspnetCoreMvcFull.Controllers
 
     // Halaman approval untuk Manager
     [HttpGet]
-    public async Task<IActionResult> Manager(string id, string badge_number, string stage)
+    public async Task<IActionResult> Manager(string document_number, string badge_number, string stage)
     {
       try
       {
         // Decode parameter dari Base64
-        int bookingId = DecodeParameter<int>(id);
+        int bookingId = int.Parse(document_number); // Atau DecodeParameter<int> jika perlu
         string badgeNumber = DecodeParameter<string>(badge_number);
 
         // Validasi badge number
@@ -77,12 +77,12 @@ namespace AspnetCoreMvcFull.Controllers
 
     // Halaman approval untuk PIC Crane
     [HttpGet]
-    public async Task<IActionResult> Pic(string id, string badge_number, string stage)
+    public async Task<IActionResult> Pic(string document_number, string badge_number, string stage)
     {
       try
       {
         // Decode parameter dari Base64
-        int bookingId = DecodeParameter<int>(id);
+        int bookingId = int.Parse(document_number); ;
         string badgeNumber = DecodeParameter<string>(badge_number);
 
         // Validasi badge number
