@@ -55,6 +55,18 @@ builder.Services.AddScoped<ICraneUsageService, CraneUsageService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
+// Daftarkan EmailTemplate sebagai singleton karena hanya berisi template
+builder.Services.AddSingleton<EmailTemplate>();
+
+// Daftarkan layanan email
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Daftarkan layanan karyawan
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+
+// Program.cs - tambahkan baris berikut di bagian pendaftaran layanan
+builder.Services.AddScoped<IBookingApprovalService, BookingApprovalService>();
+
 // Konfigurasi Autentikasi
 builder.Services.AddAuthentication(options =>
 {

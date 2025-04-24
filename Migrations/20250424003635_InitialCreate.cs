@@ -113,7 +113,14 @@ namespace AspnetCoreMvcFull.Migrations
                     CostCode = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     PhoneNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    CustomHazard = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
+                    CustomHazard = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    ManagerName = table.Column<string>(type: "text", nullable: true),
+                    ManagerApprovalTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    ManagerRejectReason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    PicName = table.Column<string>(type: "text", nullable: true),
+                    PicApprovalTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    PicRejectReason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {

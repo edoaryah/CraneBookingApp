@@ -1,7 +1,19 @@
+// [Models/Booking.cs]
+// Penambahan properti untuk approval (Status, ManagerName, ManagerApprovalTime, dll).
 using System.ComponentModel.DataAnnotations;
 
 namespace AspnetCoreMvcFull.Models
 {
+  public enum BookingStatus
+  {
+    Pending,
+    ManagerApproved,
+    Approved,
+    ManagerRejected,
+    Rejected,
+    Done
+  }
+
   public class Booking
   {
     [Key]
@@ -45,6 +57,22 @@ namespace AspnetCoreMvcFull.Models
 
     [StringLength(500)]
     public string? CustomHazard { get; set; }
+
+    // Kolom untuk approval
+    [Required]
+    public BookingStatus Status { get; set; } = BookingStatus.Pending;
+
+    // Data Manager
+    public string? ManagerName { get; set; }
+    public DateTime? ManagerApprovalTime { get; set; }
+    [StringLength(500)]
+    public string? ManagerRejectReason { get; set; }
+
+    // Data PIC Crane
+    public string? PicName { get; set; }
+    public DateTime? PicApprovalTime { get; set; }
+    [StringLength(500)]
+    public string? PicRejectReason { get; set; }
 
     public virtual Crane? Crane { get; set; }
 

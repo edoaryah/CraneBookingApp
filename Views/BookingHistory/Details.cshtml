@@ -1,9 +1,11 @@
+@model AspnetCoreMvcFull.DTOs.BookingDetailDto
 @{
   ViewData["Title"] = "Booking Details";
   Layout = "_ContentNavbarLayout";
 }
 
-@section PageStyles {
+@section PageStyles
+{
   <style>
     .required-label:after {
       content: " *";
@@ -129,6 +131,58 @@
     .shift-indicator.unchecked {
       background-color: #d9d9d9;
     }
+
+    /* Timeline styling */
+    .timeline {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      position: relative;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 1.25rem;
+      top: 0;
+      height: 100%;
+      width: 2px;
+      background-color: #e0e0e0;
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-left: 3rem;
+    }
+
+    .timeline-indicator {
+      position: absolute;
+      left: 0;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      color: #fff;
+    }
+
+    .timeline-event {
+      position: relative;
+      padding: 0.5rem 0;
+    }
+
+    .timeline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .timeline-body {
+      margin-bottom: 0.5rem;
+    }
   </style>
 }
 
@@ -143,7 +197,7 @@
       </div>
 
       <div class="card-body">
-        <!-- Loading indicator -->
+        <!--Loading indicator-->
         <div id="loadingIndicator" class="text-center py-5">
           <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
@@ -151,13 +205,193 @@
           <p class="mt-2">Loading booking details...</p>
         </div>
 
-        <!-- Error message -->
+        <!--Error message-->
         <div id="errorMessage" class="alert alert-danger" style="display: none;">
           Failed to load booking details. Please try again or go back to history.
         </div>
 
         <!-- Booking details form -->
         <form id="bookingDetailsForm" style="display: none;">
+
+          <!-- Approval Status Section -->
+          <div class="form-section">
+            <h6 class="form-section-title">Status Approval</h6>
+            <div class="row mb-3">
+              <div class="col-12">
+                @{
+                  string statusClass = "";
+                  string statusText = "";
+
+                  switch (Model.Status)
+                  {
+                    case BookingStatus.Pending:
+                      statusClass = "bg-warning text-white";
+                      statusText = "Menunggu Persetujuan Manager";
+                      break;
+                    case BookingStatus.ManagerApproved:
+                      statusClass = "bg-info text-white";
+                      statusText = "Disetujui Manager, Menunggu Persetujuan PIC Crane";
+                      break;
+                    case BookingStatus.Approved:
+                      statusClass = "bg-success text-white";
+                      statusText = "Disetujui";
+                      break;
+                    case BookingStatus.ManagerRejected:
+                      statusClass = "bg-danger text-white";
+                      statusText = "Ditolak oleh Manager";
+                      break;
+                    case BookingStatus.Rejected:
+                      statusClass = "bg-danger text-white";
+                      statusText = "Ditolak oleh PIC Crane";
+                      break;
+                    case BookingStatus.Done:
+                      statusClass = "bg-secondary text-white";
+                      statusText = "Selesai";
+                      break;
+                  }
+                }
+
+                <div class="card @statusClass">
+                  <div class="card-body">
+                    <h5 class="card-title text-white">Status: @statusText</h5>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Approval Timeline -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="mb-0">Riwayat Approval</h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="timeline mt-3">
+                      <!-- Submission -->
+                      <li class="timeline-item mb-4">
+                        <span class="timeline-indicator bg-primary">
+                          <i class="bx bx-send"></i>
+                        </span>
+                        <div class="timeline-event">
+                          <div class="timeline-header">
+                            <h6 class="mb-0">Booking Diajukan</h6>
+                            <small class="text-muted">@Model.SubmitTime.ToString("dd/MM/yyyy HH:mm")</small>
+                          </div>
+                          <div class="timeline-body">
+                            <p>Booking diajukan oleh @Model.Name</p>
+                          </div>
+                        </div>
+                      </li>
+
+                      <!-- Manager Approval -->
+                      @if (!string.IsNullOrEmpty(Model.ManagerName))
+                      {
+                        string managerIcon = Model.Status == BookingStatus.ManagerRejected ? "bx-x" : "bx-check";
+                        string managerClass = Model.Status == BookingStatus.ManagerRejected ? "bg-danger" : "bg-success";
+
+                        <li class="timeline-item mb-4">
+                          <span class="timeline-indicator @managerClass">
+                            <i class="bx @managerIcon"></i>
+                          </span>
+                          <div class="timeline-event">
+                            <div class="timeline-header">
+                              <h6 class="mb-0">@(Model.Status == BookingStatus.ManagerRejected ? "Ditolak oleh Manager" :
+                                                              "Disetujui oleh Manager")</h6>
+                            <small class="text-muted">@Model.ManagerApprovalTime?.ToString("dd/MM/yyyy HH:mm")</small>
+                          </div>
+                          <div class="timeline-body">
+                            <p>@Model.ManagerName</p>
+                            @if (Model.Status == BookingStatus.ManagerRejected &&
+                                                        !string.IsNullOrEmpty(Model.ManagerRejectReason))
+                              {
+                                <p class="text-danger">Alasan: @Model.ManagerRejectReason</p>
+                              }
+                            </div>
+                          </div>
+                        </li>
+                      }
+
+                      <!-- PIC Approval -->
+                      @if (!string.IsNullOrEmpty(Model.PicName))
+                      {
+                        string picIcon = Model.Status == BookingStatus.Rejected ? "bx-x" : (Model.Status ==
+                        BookingStatus.Done ? "bx-check-double" : "bx-check");
+                        string picClass = Model.Status == BookingStatus.Rejected ? "bg-danger" : "bg-success";
+
+                        <li class="timeline-item mb-4">
+                          <span class="timeline-indicator @picClass">
+                            <i class="bx @picIcon"></i>
+                          </span>
+                          <div class="timeline-event">
+                            <div class="timeline-header">
+                              <h6 class="mb-0">
+                                @if (Model.Status == BookingStatus.Rejected)
+                                {
+                                  <span>Ditolak oleh PIC Crane</span>
+                                }
+                                else if (Model.Status == BookingStatus.Done)
+                                {
+                                  <span>Ditandai Selesai oleh PIC Crane</span>
+                                }
+                                else
+                                {
+                                  <span>Disetujui oleh PIC Crane</span>
+                                }
+                              </h6>
+                              <small class="text-muted">@Model.PicApprovalTime?.ToString("dd/MM/yyyy HH:mm")</small>
+                            </div>
+                            <div class="timeline-body">
+                              <p>@Model.PicName</p>
+                              @if (Model.Status == BookingStatus.Rejected && !string.IsNullOrEmpty(Model.PicRejectReason))
+                              {
+                                <p class="text-danger">Alasan: @Model.PicRejectReason</p>
+                              }
+                            </div>
+                          </div>
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons for PIC Crane -->
+            @if (User.IsInRole("pic") && Model.Status == BookingStatus.Approved)
+            {
+              <div class="row mb-3">
+                <div class="col-12">
+                  <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#markDoneModal">
+                    <i class="bx bx-check-double me-1"></i> Tandai Selesai
+                  </button>
+                </div>
+              </div>
+
+              <!-- Mark Done Modal -->
+              <div class="modal fade" id="markDoneModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                  <div class="modal-content">
+                    <form method="post" action="/Approval/MarkAsDone">
+                      <input type="hidden" name="bookingId" value="@Model.Id" />
+                      <input type="hidden" name="picName" value="@User.Identity.Name" />
+                      <div class="modal-header">
+                        <h5 class="modal-title">Konfirmasi</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p>Apakah Anda yakin ingin menandai booking ini sebagai selesai?</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success">Tandai Selesai</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
 
           <!-- Requestor Information Section -->
           <div class="form-section">
@@ -192,7 +426,7 @@
             </div>
           </div>
 
-          <!-- Booking Details Section -->
+          <!--Booking Details Section -->
           <div class="form-section">
             <h6 class="form-section-title">Booking Details</h6>
             <div class="row mb-3">
@@ -217,13 +451,13 @@
               </div>
             </div>
 
-            <!-- Shift Selection Table -->
+            <!--Shift Selection Table -->
             <div class="row mb-3">
               <div class="col-12">
                 <label class="form-label">Shift Selections</label>
                 <div id="shiftTableContainer" class="card">
                   <div class="table-responsive text-nowrap">
-                    <!-- Shift table will be generated here -->
+                    <!--Shift table will be generated here -->
                   </div>
                 </div>
               </div>
@@ -240,7 +474,7 @@
               </div>
             </div>
 
-            <!-- Items to be Lifted Table -->
+            <!--Items to be Lifted Table -->
             <div class="row mb-3">
               <div class="col-12">
                 <label class="form-label">Items to be Lifted</label>
@@ -249,14 +483,14 @@
                     <table class="table table-hover mb-0">
                       <thead class="table-border-top-0">
                         <tr>
-                          <th style="width: 40%; min-width: 220px; padding-right: 5px;">Item Name (p x l x t)</th>
-                          <th style="width: 15%; min-width: 140px; padding-right: 5px;">Height of Lifting (m)</th>
-                          <th style="width: 15%; min-width: 140px; padding-right: 5px;">Weight (ton)</th>
+                          <th style="width: 40%; min-width: 220px; padding-right: 5px;">Item Name(p x l x t)</th>
+                          <th style="width: 15%; min-width: 140px; padding-right: 5px;">Height of Lifting(m)</th>
+                          <th style="width: 15%; min-width: 140px; padding-right: 5px;">Weight(ton)</th>
                           <th style="width: 15%; min-width: 140px; padding-right: 5px;">Quantity</th>
                         </tr>
                       </thead>
                       <tbody id="liftedItemsBody" class="table-border-bottom-0">
-                        <!-- The rows will be added by JavaScript -->
+                        <!--The rows will be added by JavaScript -->
                       </tbody>
                     </table>
                   </div>
@@ -271,7 +505,7 @@
                 <div id="hazardsCardContainer" class="card">
                   <div class="table-responsive">
                     <div id="hazardsContainer" class="row">
-                      <!-- Hazards will be loaded dynamically -->
+                      <!--Hazards will be loaded dynamically -->
                     </div>
 
                     <div id="customHazardContainer" class="mt-3" style="display: none;">
@@ -306,7 +540,8 @@
     document.addEventListener('DOMContentLoaded', function () {
       if (bookingId) {
         loadBookingDetails(bookingId);
-      } else {
+      }
+      else {
         showError('Invalid booking ID');
       }
     });

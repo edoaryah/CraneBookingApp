@@ -1,3 +1,6 @@
+// DTOs/Booking/BookingDetailDto.cs
+using AspnetCoreMvcFull.Models;
+
 namespace AspnetCoreMvcFull.DTOs
 {
   public class BookingDetailDto
@@ -16,6 +19,20 @@ namespace AspnetCoreMvcFull.DTOs
     public string? CostCode { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Description { get; set; }
+
+    // Status approval
+    public BookingStatus Status { get; set; }
+
+    // Manager approval info
+    public string? ManagerName { get; set; }
+    public DateTime? ManagerApprovalTime { get; set; }
+    public string? ManagerRejectReason { get; set; }
+
+    // PIC approval info
+    public string? PicName { get; set; }
+    public DateTime? PicApprovalTime { get; set; }
+    public string? PicRejectReason { get; set; }
+
     public List<BookingShiftDto> Shifts { get; set; } = new List<BookingShiftDto>();
     public List<BookingItemDto> Items { get; set; } = new List<BookingItemDto>();
     public List<HazardDto> SelectedHazards { get; set; } = new List<HazardDto>();

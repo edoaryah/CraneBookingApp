@@ -1,0 +1,143 @@
+<!-- Views/BookingHistory/Approved.cshtml -->
+@{
+  ViewData["Title"] = "Approved Bookings";
+  Layout = "_ContentNavbarLayout";
+}
+
+<div class="container-xxl flex-grow-1 container-p-y">
+  <h4 class="fw-bold py-3 mb-4">
+    <span class="text-muted fw-light">Crane Booking /</span> Approved Bookings
+  </h4>
+
+  <div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <h5 class="mb-0">Approved Bookings</h5>
+    </div>
+
+    <div class="card-body">
+      <div class="table-responsive text-nowrap">
+        <table id="bookingsTable" class="table table-hover">
+          <thead>
+            <tr>
+              <th>Booking #</th>
+              <th>Requester</th>
+              <th>Department</th>
+              <th>Crane</th>
+              <th>Period</th>
+              <th>Approved By</th>
+              <th>Approval Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody class="table-border-bottom-0">
+            <!-- Data akan diisi via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mark as Done Modal -->
+<div class="modal fade" id="markDoneModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form id="markDoneForm" method="post" action="/Approval/MarkAsDone">
+        <input type="hidden" id="bookingIdInput" name="bookingId" value="" />
+        <input type="hidden" name="picName" value="@User.Identity.Name" />
+        <div class="modal-header">
+          <h5 class="modal-title">Konfirmasi Selesai</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Apakah Anda yakin ingin menandai booking <strong id="bookingNumberText"></strong> sebagai selesai?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-success">Tandai Selesai</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section PageScripts {
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      loadApprovedBookings();
+
+      // Setup modal event handler
+      const markDoneModal = document.getElementById('markDoneModal');
+      if (markDoneModal) {
+        markDoneModal.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget;
+          const bookingId = button.getAttribute('data-booking-id');
+          const bookingNumber = button.getAttribute('data-booking-number');
+
+          document.getElementById('bookingIdInput').value = bookingId;
+          document.getElementById('bookingNumberText').textContent = bookingNumber;
+        });
+      }
+    });
+
+    async function loadApprovedBookings() {
+      try {
+        const response = await fetch('/api/Bookings/Approved');
+        if (!response.ok) {
+          throw new Error('Failed to fetch approved bookings');
+        }
+
+        const bookings = await response.json();
+        renderBookingsTable(bookings);
+      } catch (error) {
+        console.error('Error loading approved bookings:', error);
+        const tableBody = document.querySelector('#bookingsTable tbody');
+        tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Error loading bookings. Please try again.</td></tr>`;
+      }
+    }
+
+    function renderBookingsTable(bookings) {
+      const tableBody = document.querySelector('#bookingsTable tbody');
+
+      if (!bookings || bookings.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="8" class="text-center">No approved bookings found</td></tr>`;
+        return;
+      }
+
+      tableBody.innerHTML = '';
+
+      bookings.forEach(booking => {
+        const startDate = new Date(booking.startDate).toLocaleDateString('id-ID');
+        const endDate = new Date(booking.endDate).toLocaleDateString('id-ID');
+        const approvalDate = new Date(booking.picApprovalTime).toLocaleDateString('id-ID', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+                        <td><a href="/BookingHistory/Details/${booking.id}">${booking.bookingNumber}</a></td>
+                        <td>${booking.name}</td>
+                        <td>${booking.department}</td>
+                        <td>${booking.craneCode}</td>
+                        <td>${startDate} - ${endDate}</td>
+                        <td>${booking.picName}</td>
+                        <td>${approvalDate}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-success"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#markDoneModal"
+                                    data-booking-id="${booking.id}"
+                                    data-booking-number="${booking.bookingNumber}">
+                                <i class="bx bx-check-double me-1"></i> Tandai Selesai
+                            </button>
+                        </td>
+                    `;
+        tableBody.appendChild(row);
+      });
+    }
+  </script>
+}

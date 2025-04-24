@@ -4,6 +4,8 @@ using AspnetCoreMvcFull.DTOs;
 using AspnetCoreMvcFull.Services;
 using AspnetCoreMvcFull.Filters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using AspnetCoreMvcFull.Models; // Untuk mengakses BookingStatus
+using Microsoft.Extensions.Logging; // Tambahkan ini untuk ILogger
 
 namespace AspnetCoreMvcFull.Controllers.Api
 {
@@ -15,10 +17,12 @@ namespace AspnetCoreMvcFull.Controllers.Api
   public class BookingsController : ControllerBase
   {
     private readonly IBookingService _bookingService;
+    private readonly ILogger<BookingsController> _logger; // Tambahkan field ini
 
-    public BookingsController(IBookingService bookingService)
+    public BookingsController(IBookingService bookingService, ILogger<BookingsController> logger)
     {
       _bookingService = bookingService;
+      _logger = logger; // Inisialisasi logger
     }
 
     // GET: api/Bookings
@@ -58,6 +62,24 @@ namespace AspnetCoreMvcFull.Controllers.Api
 
       var calendarData = await _bookingService.GetCalendarViewAsync(start, end);
       return Ok(calendarData);
+    }
+
+    // Controllers/Api/BookingsController.cs - tambahkan endpoint untuk mendapatkan approved bookings
+    // GET: api/Bookings/Approved
+    [HttpGet("Approved")]
+    public async Task<ActionResult<IEnumerable<BookingDetailDto>>> GetApprovedBookings()
+    {
+      try
+      {
+        // Mendapatkan semua booking dengan status Approved menggunakan BookingService
+        var bookings = await _bookingService.GetBookingsByStatusAsync(BookingStatus.Approved);
+        return Ok(bookings);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error fetching approved bookings");
+        return StatusCode(500, new { message = "Terjadi kesalahan saat mengambil data booking yang disetujui." });
+      }
     }
 
     // POST: api/Bookings

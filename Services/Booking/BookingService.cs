@@ -1,3 +1,5 @@
+// [Services/Booking/BookingService.cs]
+// Modifikasi CreateBookingAsync untuk mengirim notifikasi, Implementasi GetBookingsByStatusAsync, Update mapper di GetBookingByIdAsync.
 using Microsoft.EntityFrameworkCore;
 using AspnetCoreMvcFull.Data;
 using AspnetCoreMvcFull.DTOs;
@@ -13,6 +15,8 @@ namespace AspnetCoreMvcFull.Services
     private readonly IShiftDefinitionService _shiftDefinitionService;
     private readonly IScheduleConflictService _scheduleConflictService;
     private readonly ILogger<BookingService> _logger;
+    private readonly IEmailService _emailService;
+    private readonly IEmployeeService _employeeService;
 
     public BookingService(
         AppDbContext context,
@@ -20,6 +24,8 @@ namespace AspnetCoreMvcFull.Services
         IHazardService hazardService,
         IShiftDefinitionService shiftDefinitionService,
         IScheduleConflictService scheduleConflictService,
+        IEmailService emailService,
+        IEmployeeService employeeService,
         ILogger<BookingService> logger)
     {
       _context = context;
@@ -27,6 +33,8 @@ namespace AspnetCoreMvcFull.Services
       _hazardService = hazardService;
       _shiftDefinitionService = shiftDefinitionService;
       _scheduleConflictService = scheduleConflictService;
+      _emailService = emailService;
+      _employeeService = employeeService;
       _logger = logger;
     }
 
@@ -56,6 +64,7 @@ namespace AspnetCoreMvcFull.Services
       }).ToList();
     }
 
+    // Dalam BookingService.cs, metode GetBookingByIdAsync
     public async Task<BookingDetailDto> GetBookingByIdAsync(int id)
     {
       var booking = await _context.Bookings
@@ -88,6 +97,21 @@ namespace AspnetCoreMvcFull.Services
         CostCode = booking.CostCode,
         PhoneNumber = booking.PhoneNumber,
         Description = booking.Description,
+        CustomHazard = booking.CustomHazard,
+
+        // Status approval
+        Status = booking.Status,
+
+        // Manager approval info
+        ManagerName = booking.ManagerName,
+        ManagerApprovalTime = booking.ManagerApprovalTime,
+        ManagerRejectReason = booking.ManagerRejectReason,
+
+        // PIC approval info
+        PicName = booking.PicName,
+        PicApprovalTime = booking.PicApprovalTime,
+        PicRejectReason = booking.PicRejectReason,
+
         Shifts = booking.BookingShifts.Select(s => new BookingShiftDto
         {
           Id = s.Id,
@@ -106,13 +130,12 @@ namespace AspnetCoreMvcFull.Services
           Quantity = i.Quantity
         }).ToList(),
         SelectedHazards = booking.BookingHazards
-        .Where(bh => bh.Hazard != null)
-        .Select(bh => new HazardDto
-        {
-          Id = bh.Hazard!.Id,
-          Name = bh.Hazard.Name
-        }).ToList(),
-        CustomHazard = booking.CustomHazard
+          .Where(bh => bh.Hazard != null)
+          .Select(bh => new HazardDto
+          {
+            Id = bh.Hazard!.Id,
+            Name = bh.Hazard.Name
+          }).ToList()
       };
     }
 
@@ -363,7 +386,7 @@ namespace AspnetCoreMvcFull.Services
           }
         }
 
-        // Create booking with a temporary booking number (will be updated after we get the ID)
+        // Create booking dengan status Pending
         var booking = new Booking
         {
           BookingNumber = "TEMP", // Temporary value
@@ -378,7 +401,8 @@ namespace AspnetCoreMvcFull.Services
           CostCode = bookingDto.CostCode,
           PhoneNumber = bookingDto.PhoneNumber,
           Description = bookingDto.Description,
-          CustomHazard = bookingDto.CustomHazard
+          CustomHazard = bookingDto.CustomHazard,
+          Status = BookingStatus.Pending
         };
 
         _context.Bookings.Add(booking);
@@ -454,6 +478,32 @@ namespace AspnetCoreMvcFull.Services
         }
 
         await _context.SaveChangesAsync();
+
+        // Cari manager departemen user
+        var manager = await _employeeService.GetManagerByDepartmentAsync(booking.Department);
+
+        // Dapatkan data user yang melakukan booking
+        var user = await _employeeService.GetEmployeeByLdapUserAsync(booking.Name);
+
+        // Kirim email notifikasi ke user
+        if (user != null && !string.IsNullOrEmpty(user.Email))
+        {
+          await _emailService.SendBookingSubmittedEmailAsync(booking, user.Email);
+        }
+
+        // Kirim email permintaan approval ke manager
+        if (manager != null && !string.IsNullOrEmpty(manager.Email) && !string.IsNullOrEmpty(manager.LdapUser))
+        {
+          await _emailService.SendManagerApprovalRequestEmailAsync(
+              booking,
+              manager.Email,
+              manager.Name,
+              manager.LdapUser);
+        }
+        else
+        {
+          _logger.LogWarning("Manager tidak ditemukan untuk departemen {Department}", booking.Department);
+        }
 
         // Return the created booking with details
         return await GetBookingByIdAsync(booking.Id);
@@ -711,6 +761,50 @@ namespace AspnetCoreMvcFull.Services
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error deleting booking: {Message}", ex.Message);
+        throw;
+      }
+    }
+
+    // Services/Booking/BookingService.cs - implementasi metode baru
+    public async Task<IEnumerable<BookingDetailDto>> GetBookingsByStatusAsync(BookingStatus status)
+    {
+      try
+      {
+        var bookings = await _context.Bookings
+            .Include(b => b.Crane)
+            .Where(b => b.Status == status)
+            .OrderByDescending(b => b.Status == BookingStatus.Approved ? b.PicApprovalTime : b.SubmitTime)
+            .ToListAsync();
+
+        var result = new List<BookingDetailDto>();
+
+        foreach (var booking in bookings)
+        {
+          result.Add(new BookingDetailDto
+          {
+            Id = booking.Id,
+            BookingNumber = booking.BookingNumber,
+            Name = booking.Name,
+            Department = booking.Department,
+            CraneId = booking.CraneId,
+            CraneCode = booking.Crane?.Code,
+            StartDate = booking.StartDate,
+            EndDate = booking.EndDate,
+            SubmitTime = booking.SubmitTime,
+            Status = booking.Status,
+            ManagerName = booking.ManagerName,
+            ManagerApprovalTime = booking.ManagerApprovalTime,
+            PicName = booking.PicName,
+            PicApprovalTime = booking.PicApprovalTime
+            // Properti lain sesuai kebutuhan
+          });
+        }
+
+        return result;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error getting bookings by status: {Status}", status);
         throw;
       }
     }

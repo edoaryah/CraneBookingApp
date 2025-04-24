@@ -1,4 +1,5 @@
 using AspnetCoreMvcFull.DTOs;
+using AspnetCoreMvcFull.Models; // Tambahkan ini untuk mengakses BookingStatus
 
 namespace AspnetCoreMvcFull.Services
 {
@@ -17,5 +18,8 @@ namespace AspnetCoreMvcFull.Services
     Task<bool> IsShiftBookingConflictAsync(int craneId, DateTime date, int shiftDefinitionId, int? excludeBookingId = null);
 
     Task<int> RelocateAffectedBookingsAsync(int craneId, DateTime maintenanceStartTime, DateTime maintenanceEndTime);
+
+    // Metode baru untuk mendapatkan booking berdasarkan status
+    Task<IEnumerable<BookingDetailDto>> GetBookingsByStatusAsync(BookingStatus status);
   }
 }

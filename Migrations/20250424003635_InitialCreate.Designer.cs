@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AspnetCoreMvcFull.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250417061926_InitialCreate")]
+    [Migration("20250424003635_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -63,6 +63,16 @@ namespace AspnetCoreMvcFull.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<DateTime?>("ManagerApprovalTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ManagerName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ManagerRejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -71,12 +81,25 @@ namespace AspnetCoreMvcFull.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<DateTime?>("PicApprovalTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PicName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PicRejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("ProjectSupervisor")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("SubmitTime")
                         .HasColumnType("timestamp without time zone");
