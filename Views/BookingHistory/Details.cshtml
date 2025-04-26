@@ -3,6 +3,11 @@
 @{
   ViewData["Title"] = "Booking Details";
   Layout = "_ContentNavbarLayout";
+
+  // Get the current user's info from ViewData passed from controller
+  var currentUserLdap = User.FindFirst("ldapuser")?.Value ?? "";
+  bool isPic = ViewData["IsPicRole"] != null && (bool)ViewData["IsPicRole"];
+  bool isBookingCreator = ViewData["IsBookingCreator"] != null && (bool)ViewData["IsBookingCreator"];
 }
 
 @section PageStyles
@@ -218,28 +223,32 @@
 
                     switch (Model.Status)
                     {
-                      case BookingStatus.Pending:
+                      case BookingStatus.PendingApproval:
                         statusClass = "bg-warning text-white";
-                        statusText = "Menunggu Persetujuan Manager";
+                        statusText = "Menunggu Persetujuan";
                         break;
                       case BookingStatus.ManagerApproved:
                         statusClass = "bg-info text-white";
                         statusText = "Disetujui Manager, Menunggu Persetujuan PIC Crane";
                         break;
-                      case BookingStatus.Approved:
+                      case BookingStatus.PICApproved:
                         statusClass = "bg-success text-white";
-                        statusText = "Disetujui";
+                        statusText = "Disetujui, Menunggu Penyelesaian";
                         break;
                       case BookingStatus.ManagerRejected:
                         statusClass = "bg-danger text-white";
                         statusText = "Ditolak oleh Manager";
                         break;
-                      case BookingStatus.Rejected:
+                      case BookingStatus.PICRejected:
                         statusClass = "bg-danger text-white";
                         statusText = "Ditolak oleh PIC Crane";
                         break;
-                      case BookingStatus.Done:
+                      case BookingStatus.Cancelled:
                         statusClass = "bg-secondary text-white";
+                        statusText = "Dibatalkan";
+                        break;
+                      case BookingStatus.Done:
+                        statusClass = "bg-dark text-white";
                         statusText = "Selesai";
                         break;
                     }
@@ -248,8 +257,89 @@
                   <div class="card @statusClass">
                     <div class="card-body">
                       <h5 class="card-title text-white">Status: @statusText</h5>
+
+                      @if (Model.Status == BookingStatus.Cancelled)
+                      {
+                        <div class="mt-2">
+                          <p class="mb-0 text-white">
+                            <strong>Dibatalkan oleh:</strong> @Model.CancelledByName <br />
+                            <strong>Waktu pembatalan:</strong> @Model.CancelledAt?.ToString("dd/MM/yyyy HH:mm") <br />
+                            <strong>Alasan pembatalan:</strong> @Model.CancelledReason
+                          </p>
+                        </div>
+                      }
+
+                      @if (Model.RevisionCount > 0)
+                      {
+                        <div class="mt-2">
+                          <p class="mb-0 text-white">
+                            <strong>Jumlah revisi:</strong> @Model.RevisionCount <br />
+                            <strong>Terakhir diubah oleh:</strong> @Model.LastModifiedBy <br />
+                            <strong>Terakhir diubah pada:</strong> @Model.LastModifiedAt.ToString("dd/MM/yyyy HH:mm")
+                          </p>
+                        </div>
+                      }
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons Section -->
+              <div class="row mb-4">
+                <div class="col-12">
+                  <!-- Buttons for users who created the booking -->
+                  @if (isBookingCreator)
+                  {
+                    @if (Model.Status == BookingStatus.ManagerRejected || Model.Status == BookingStatus.PICRejected)
+                    {
+                      <a href="/BookingAction/Edit/@Model.Id" class="btn btn-warning me-2">
+                        <i class="bx bx-edit me-1"></i> Edit Booking
+                      </a>
+                    }
+
+                    @if (Model.Status != BookingStatus.Cancelled && Model.Status != BookingStatus.Done)
+                    {
+                      <a href="/BookingAction/Cancel/@Model.Id" class="btn btn-danger me-2">
+                        <i class="bx bx-x-circle me-1"></i> Batalkan Booking
+                      </a>
+                    }
+                  }
+
+                  <!-- Buttons for PIC role -->
+                  @if (isPic)
+                  {
+                    @if (Model.Status == BookingStatus.ManagerApproved)
+                    {
+                      <button type="button" class="btn btn-success me-2" data-bs-toggle="modal"
+                        data-bs-target="#approveModal">
+                        <i class="bx bx-check me-1"></i> Setujui
+                      </button>
+
+                      <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="bx bx-x me-1"></i> Tolak
+                      </button>
+                    }
+
+                    @if (Model.Status == BookingStatus.PICApproved)
+                    {
+                      <button type="button" class="btn btn-success me-2" data-bs-toggle="modal"
+                        data-bs-target="#markDoneModal">
+                        <i class="bx bx-check-double me-1"></i> Tandai Selesai
+                      </button>
+                    }
+
+                    @if (Model.Status != BookingStatus.Cancelled && Model.Status != BookingStatus.Done)
+                    {
+                      <a href="/BookingAction/Cancel/@Model.Id" class="btn btn-danger me-2">
+                        <i class="bx bx-x-circle me-1"></i> Batalkan Booking
+                      </a>
+                    }
+                  }
+
+                  <!-- Back button for everyone -->
+                  <a href="/BookingHistory" class="btn btn-outline-secondary">
+                    <i class="bx bx-arrow-back me-1"></i> Kembali
+                  </a>
                 </div>
               </div>
 
@@ -307,11 +397,11 @@
                         }
 
                         <!--PIC Approval-->
-                        @if (!string.IsNullOrEmpty(Model.PicName))
+                        @if (!string.IsNullOrEmpty(Model.ApprovedByPIC))
                         {
-                          string picIcon = Model.Status == BookingStatus.Rejected ? "bx-x" : (Model.Status ==
-                          BookingStatus.Done ? "bx-check-double" : "bx-check");
-                          string picClass = Model.Status == BookingStatus.Rejected ? "bg-danger" : "bg-success";
+                          string picIcon = Model.Status == BookingStatus.PICRejected ? "bx-x" :
+                          (Model.Status == BookingStatus.Done ? "bx-check-double" : "bx-check");
+                          string picClass = Model.Status == BookingStatus.PICRejected ? "bg-danger" : "bg-success";
 
                           <li class="timeline-item mb-4">
                             <span class="timeline-indicator @picClass">
@@ -320,26 +410,74 @@
                             <div class="timeline-event">
                               <div class="timeline-header">
                                 <h6 class="mb-0">
-                                  @if (Model.Status == BookingStatus.Rejected)
+                                  @if (Model.Status == BookingStatus.PICRejected)
                                   {
                                     <span>Ditolak oleh PIC Crane</span>
-                                  }
-                                  else if (Model.Status == BookingStatus.Done)
-                                  {
-                                    <span>Ditandai Selesai oleh PIC Crane</span>
                                   }
                                   else
                                   {
                                     <span>Disetujui oleh PIC Crane</span>
                                   }
                                 </h6>
-                                <small class="text-muted">@Model.PicApprovalTime?.ToString("dd/MM/yyyy HH:mm")</small>
+                                <small class="text-muted">@Model.ApprovedAtByPIC?.ToString("dd/MM/yyyy HH:mm")</small>
                               </div>
                               <div class="timeline-body">
-                                <p>@Model.PicName</p>
-                                @if (Model.Status == BookingStatus.Rejected && !string.IsNullOrEmpty(Model.PicRejectReason))
+                                <p>@Model.ApprovedByPIC</p>
+                                @if (Model.Status == BookingStatus.PICRejected &&
+                                                            !string.IsNullOrEmpty(Model.PICRejectReason))
                                 {
-                                  <p class="text-danger">Alasan: @Model.PicRejectReason</p>
+                                  <p class="text-danger">Alasan: @Model.PICRejectReason</p>
+                                }
+                              </div>
+                            </div>
+                          </li>
+                        }
+
+                        <!-- Done Status -->
+                        @if (Model.Status == BookingStatus.Done && !string.IsNullOrEmpty(Model.DoneByPIC))
+                        {
+                          <li class="timeline-item mb-4">
+                            <span class="timeline-indicator bg-dark">
+                              <i class="bx bx-check-double"></i>
+                            </span>
+                            <div class="timeline-event">
+                              <div class="timeline-header">
+                                <h6 class="mb-0">Ditandai Selesai</h6>
+                                <small class="text-muted">@Model.DoneAt?.ToString("dd/MM/yyyy HH:mm")</small>
+                              </div>
+                              <div class="timeline-body">
+                                <p>Booking ditandai selesai oleh @Model.DoneByPIC</p>
+                              </div>
+                            </div>
+                          </li>
+                        }
+
+                        <!-- Cancelled Status -->
+                        @if (Model.Status == BookingStatus.Cancelled && !string.IsNullOrEmpty(Model.CancelledByName))
+                        {
+                          <li class="timeline-item mb-4">
+                            <span class="timeline-indicator bg-secondary">
+                              <i class="bx bx-x-circle"></i>
+                            </span>
+                            <div class="timeline-event">
+                              <div class="timeline-header">
+                                <h6 class="mb-0">Dibatalkan</h6>
+                                <small class="text-muted">@Model.CancelledAt?.ToString("dd/MM/yyyy HH:mm")</small>
+                              </div>
+                              <div class="timeline-body">
+                                <p>
+                                  @if (Model.CancelledBy == BookingCancelledBy.User)
+                                  {
+                                    <span>Booking dibatalkan oleh pengguna: @Model.CancelledByName</span>
+                                  }
+                                  else if (Model.CancelledBy == BookingCancelledBy.PIC)
+                                  {
+                                    <span>Booking dibatalkan oleh PIC: @Model.CancelledByName</span>
+                                  }
+                                </p>
+                                @if (!string.IsNullOrEmpty(Model.CancelledReason))
+                                {
+                                  <p>Alasan: @Model.CancelledReason</p>
                                 }
                               </div>
                             </div>
@@ -350,41 +488,6 @@
                   </div>
                 </div>
               </div>
-
-              <!--Action Buttons for PIC Crane-->
-              @if (User.IsInRole("pic") && Model.Status == BookingStatus.Approved)
-              {
-                <div class="row mb-3">
-                  <div class="col-12">
-                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#markDoneModal">
-                      <i class="bx bx-check-double me-1"></i> Tandai Selesai
-                    </button>
-                  </div>
-                </div>
-
-                <!--Mark Done Modal-->
-                <div class="modal fade" id="markDoneModal" tabindex="-1" aria-hidden="true">
-                  <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                      <form method="post" action="/Approval/MarkAsDone">
-                        <input type="hidden" name="bookingId" value="@Model.Id" />
-                        <input type="hidden" name="picName" value="@User.Identity.Name" />
-                        <div class="modal-header">
-                          <h5 class="modal-title">Konfirmasi</h5>
-                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                          <p>Apakah Anda yakin ingin menandai booking ini sebagai selesai?</p>
-                        </div>
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                          <button type="submit" class="btn btn-success">Tandai Selesai</button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-              }
             </div>
 
             <!--Requestor Information Section-->
@@ -593,13 +696,6 @@
                   </div>
                 </div>
               </div>
-              <div class="row">
-                <div class="col-12 d-flex justify-content-start">
-                  <a href="/BookingHistory" class="btn btn-outline-secondary">
-                    <i class="bx bx-arrow-back me-1"></i> Back to History
-                  </a>
-                </div>
-              </div>
             </div>
           </form>
         }
@@ -607,3 +703,79 @@
     </div>
   </div>
 </div>
+
+<!-- Modals for PIC actions -->
+@if (isPic)
+{
+  <!-- Approve Modal -->
+  <div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <form method="post" action="/Approval/ApproveByPic">
+          <input type="hidden" name="bookingId" value="@Model.Id" />
+          <input type="hidden" name="picName" value="@User.Identity.Name" />
+          <div class="modal-header">
+            <h5 class="modal-title">Konfirmasi Persetujuan</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>Apakah Anda yakin ingin menyetujui booking ini?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="submit" class="btn btn-success">Setujui</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reject Modal -->
+  <div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <form method="post" action="/Approval/RejectByPic">
+          <input type="hidden" name="bookingId" value="@Model.Id" />
+          <input type="hidden" name="picName" value="@User.Identity.Name" />
+          <div class="modal-header">
+            <h5 class="modal-title">Konfirmasi Penolakan</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="rejectReason" class="form-label">Alasan Penolakan</label>
+              <textarea name="rejectReason" id="rejectReason" class="form-control" required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="submit" class="btn btn-danger">Tolak</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mark Done Modal -->
+  <div class="modal fade" id="markDoneModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <form method="post" action="/Approval/MarkAsDone">
+          <input type="hidden" name="bookingId" value="@Model.Id" />
+          <input type="hidden" name="picName" value="@User.Identity.Name" />
+          <div class="modal-header">
+            <h5 class="modal-title">Konfirmasi</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>Apakah Anda yakin ingin menandai booking ini sebagai selesai?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="submit" class="btn btn-success">Tandai Selesai</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}

@@ -72,7 +72,7 @@ namespace AspnetCoreMvcFull.Controllers.Api
       try
       {
         // Mendapatkan semua booking dengan status Approved menggunakan BookingService
-        var bookings = await _bookingService.GetBookingsByStatusAsync(BookingStatus.Approved);
+        var bookings = await _bookingService.GetBookingsByStatusAsync(BookingStatus.PICApproved);
         return Ok(bookings);
       }
       catch (Exception ex)

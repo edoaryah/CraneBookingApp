@@ -10,5 +10,7 @@ namespace AspnetCoreMvcFull.Services
     Task<bool> ApproveByPicAsync(int bookingId, string picName);
     Task<bool> RejectByPicAsync(int bookingId, string picName, string rejectReason);
     Task<bool> MarkAsDoneAsync(int bookingId, string picName);
+    Task<bool> CancelBookingAsync(int bookingId, BookingCancelledBy cancelledBy, string cancelledByName, string cancelReason);
+    Task<bool> ReviseRejectedBookingAsync(int bookingId, string revisedByName);
   }
 }

@@ -11,13 +11,16 @@ namespace AspnetCoreMvcFull.Controllers
   public class BookingHistoryController : Controller
   {
     private readonly IBookingService _bookingService;
+    private readonly IRoleService _roleService;
     private readonly ILogger<BookingHistoryController> _logger;
 
     public BookingHistoryController(
         IBookingService bookingService,
+        IRoleService roleService,
         ILogger<BookingHistoryController> logger)
     {
       _bookingService = bookingService;
+      _roleService = roleService;
       _logger = logger;
     }
 
@@ -30,10 +33,30 @@ namespace AspnetCoreMvcFull.Controllers
     {
       try
       {
-        // Mendapatkan detail booking dari service
+        // Get the current user's information from claims
+        var ldapUser = User.FindFirst("ldapuser")?.Value;
+        var userName = User.FindFirst("name")?.Value;
+
+        if (string.IsNullOrEmpty(ldapUser))
+        {
+          _logger.LogWarning("User LDAP username not found in claims");
+          return RedirectToAction("Login", "Auth");
+        }
+
+        // Get booking details
         var booking = await _bookingService.GetBookingByIdAsync(id);
 
-        // Meneruskan data booking ke view sebagai model
+        // Check if user has PIC role using the role service
+        bool isPic = await _roleService.UserHasRoleAsync(ldapUser, "pic");
+
+        // Check if current user is the booking creator
+        bool isBookingCreator = (userName == booking.Name);
+
+        // Pass role information to the view
+        ViewData["IsPicRole"] = isPic;
+        ViewData["IsBookingCreator"] = isBookingCreator;
+
+        // Pass the booking to the view
         return View(booking);
       }
       catch (KeyNotFoundException ex)
@@ -44,7 +67,7 @@ namespace AspnetCoreMvcFull.Controllers
       catch (Exception ex)
       {
         _logger.LogError(ex, "Terjadi kesalahan saat memuat detail booking dengan ID {id}", id);
-        return View(null); // Kirim model null, view akan menampilkan pesan error
+        return View(null); // Send null model, view will display error message
       }
     }
 

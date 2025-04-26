@@ -39,9 +39,9 @@ namespace AspnetCoreMvcFull.Services
         }
 
         // Memastikan booking dalam status yang benar
-        if (booking.Status != BookingStatus.Pending)
+        if (booking.Status != BookingStatus.PendingApproval)
         {
-          _logger.LogWarning("Booking dengan ID {BookingId} tidak dalam status Pending", bookingId);
+          _logger.LogWarning("Booking dengan ID {BookingId} tidak dalam status PendingApproval", bookingId);
           return false;
         }
 
@@ -97,9 +97,9 @@ namespace AspnetCoreMvcFull.Services
         }
 
         // Memastikan booking dalam status yang benar
-        if (booking.Status != BookingStatus.Pending)
+        if (booking.Status != BookingStatus.PendingApproval)
         {
-          _logger.LogWarning("Booking dengan ID {BookingId} tidak dalam status Pending", bookingId);
+          _logger.LogWarning("Booking dengan ID {BookingId} tidak dalam status PendingApproval", bookingId);
           return false;
         }
 
@@ -152,10 +152,10 @@ namespace AspnetCoreMvcFull.Services
           return false;
         }
 
-        // Update status booking menjadi Approved
-        booking.Status = BookingStatus.Approved;
-        booking.PicName = picName;
-        booking.PicApprovalTime = DateTime.Now;
+        // Update status booking menjadi PICApproved
+        booking.Status = BookingStatus.PICApproved;
+        booking.ApprovedByPIC = picName;
+        booking.ApprovedAtByPIC = DateTime.Now;
 
         await _context.SaveChangesAsync();
 
@@ -196,11 +196,9 @@ namespace AspnetCoreMvcFull.Services
           return false;
         }
 
-        // Update status booking menjadi Rejected
-        booking.Status = BookingStatus.Rejected;
-        booking.PicName = picName;
-        booking.PicApprovalTime = DateTime.Now;
-        booking.PicRejectReason = rejectReason;
+        // Update status booking menjadi PICRejected
+        booking.Status = BookingStatus.PICRejected;
+        booking.PICRejectReason = rejectReason;
 
         await _context.SaveChangesAsync();
 
@@ -238,14 +236,16 @@ namespace AspnetCoreMvcFull.Services
         }
 
         // Memastikan booking dalam status yang benar
-        if (booking.Status != BookingStatus.Approved)
+        if (booking.Status != BookingStatus.PICApproved)
         {
-          _logger.LogWarning("Booking dengan ID {BookingId} tidak dalam status Approved", bookingId);
+          _logger.LogWarning("Booking dengan ID {BookingId} tidak dalam status PICApproved", bookingId);
           return false;
         }
 
         // Update status booking menjadi Done
         booking.Status = BookingStatus.Done;
+        booking.DoneByPIC = picName;
+        booking.DoneAt = DateTime.Now;
 
         await _context.SaveChangesAsync();
 
@@ -256,6 +256,102 @@ namespace AspnetCoreMvcFull.Services
       catch (Exception ex)
       {
         _logger.LogError(ex, "Error saat menandai booking dengan ID {BookingId} sebagai selesai", bookingId);
+        throw;
+      }
+    }
+
+    public async Task<bool> CancelBookingAsync(int bookingId, BookingCancelledBy cancelledBy, string cancelledByName, string cancelReason)
+    {
+      try
+      {
+        var booking = await _context.Bookings
+            .FirstOrDefaultAsync(b => b.Id == bookingId);
+
+        if (booking == null)
+        {
+          _logger.LogWarning("Booking dengan ID {BookingId} tidak ditemukan", bookingId);
+          return false;
+        }
+
+        // Memastikan booking belum selesai
+        if (booking.Status == BookingStatus.Done)
+        {
+          _logger.LogWarning("Booking dengan ID {BookingId} tidak dapat dibatalkan karena sudah selesai", bookingId);
+          return false;
+        }
+
+        // Update status booking menjadi Cancelled
+        booking.Status = BookingStatus.Cancelled;
+        booking.CancelledBy = cancelledBy;
+        booking.CancelledByName = cancelledByName;
+        booking.CancelledAt = DateTime.Now;
+        booking.CancelledReason = cancelReason;
+
+        await _context.SaveChangesAsync();
+
+        // Kirim notifikasi email ke semua pihak terkait
+        // TODO: Implementasi email notifikasi pembatalan
+
+        return true;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error saat membatalkan booking dengan ID {BookingId}", bookingId);
+        throw;
+      }
+    }
+
+    public async Task<bool> ReviseRejectedBookingAsync(int bookingId, string revisedByName)
+    {
+      try
+      {
+        var booking = await _context.Bookings
+            .FirstOrDefaultAsync(b => b.Id == bookingId);
+
+        if (booking == null)
+        {
+          _logger.LogWarning("Booking dengan ID {BookingId} tidak ditemukan", bookingId);
+          return false;
+        }
+
+        // Memastikan booking dalam status yang bisa direvisi
+        if (booking.Status != BookingStatus.ManagerRejected && booking.Status != BookingStatus.PICRejected)
+        {
+          _logger.LogWarning("Booking dengan ID {BookingId} tidak dalam status yang dapat direvisi", bookingId);
+          return false;
+        }
+
+        // Reset status booking menjadi PendingApproval
+        booking.Status = BookingStatus.PendingApproval;
+        booking.RevisionCount++;
+        booking.LastModifiedAt = DateTime.Now;
+        booking.LastModifiedBy = revisedByName;
+
+        // Reset approval fields jika perlu
+        if (booking.Status == BookingStatus.PICRejected)
+        {
+          // Jika ditolak oleh PIC, kita perlu reset status approval PIC
+          booking.PICRejectReason = null;
+          // Tetap mempertahankan approval Manager
+        }
+        else
+        {
+          // Jika ditolak oleh Manager, reset semua status approval
+          booking.ManagerName = null;
+          booking.ManagerApprovalTime = null;
+          booking.ManagerRejectReason = null;
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Kirim notifikasi email ke pihak terkait
+        // TODO: Implementasi email notifikasi revisi
+
+        return true;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error saat merevisi booking dengan ID {BookingId}", bookingId);
         throw;
       }
     }

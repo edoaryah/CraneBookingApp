@@ -364,5 +364,123 @@ namespace AspnetCoreMvcFull.Services
               </body>
             </html>";
     }
+
+    // Services/Email/EmailTemplate.cs
+    // Add these methods to the existing EmailTemplate class
+
+    public string BookingCancelledTemplate(string name, Booking booking, string cancelledBy, string cancelReason)
+    {
+      string detailUrl = $"{_baseUrl}/BookingHistory/Details/{booking.Id}";
+
+      return $@"<!doctype html>
+        <html lang=""en"">
+          <head>
+            <meta charset=""UTF-8"">
+            <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+          </head>
+          <body style=""font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa;"">
+            <table role=""presentation"" style=""width: 100%; background-color: #f8f9fa;"" cellpadding=""0"" cellspacing=""0"">
+              <tr>
+                <td align=""center"">
+                  <table role=""presentation"" class=""card"" style=""border: 1px solid #e0e0e0; border-radius: 4px; max-width: 600px; margin: 20px auto; background-color: white; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);"" cellpadding=""0"" cellspacing=""0"">
+                    <tr>
+                      <td style=""background-color: #ff3e1d; color: white; padding: 15px; font-size: 20px; text-align: center; border-radius: 4px 4px 0 0;"">
+                        <strong>Notifikasi Booking Crane | Dibatalkan</strong>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style=""padding: 20px; color: #212529; font-size: 16px;"">
+                        <p>Yth, Bapak/Ibu {name},</p>
+                        <p>Booking crane dengan nomor <strong>{booking.BookingNumber}</strong> telah dibatalkan oleh {cancelledBy}.</p>
+                        <p>Detail Booking:</p>
+                        <ul>
+                          <li>Crane: <strong>{booking.Crane?.Code ?? "Unknown"}</strong></li>
+                          <li>Lokasi: <strong>{booking.Location}</strong></li>
+                          <li>Tanggal Mulai: <strong>{booking.StartDate:dd/MM/yyyy}</strong></li>
+                          <li>Tanggal Selesai: <strong>{booking.EndDate:dd/MM/yyyy}</strong></li>
+                        </ul>
+                        <p>Alasan Pembatalan: {cancelReason}</p>
+                        <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" style=""margin: 0 auto;"">
+                          <tr>
+                            <td align=""center"" style=""border-radius: 4px;"" bgcolor=""#ff3e1d"">
+                              <a href=""{detailUrl}"" target=""_blank"" style=""font-size: 16px; font-family: Arial, sans-serif; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; background-color: #ff3e1d; border: 1px solid #ff3e1d; display: inline-block;"">
+                                Lihat Detail Booking
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        <div style=""color: #6c757d; font-size: 14px; margin-top: 20px;"">
+                          <p>Terima Kasih,<br>
+                          Crane Booking System<br>
+                          <em>Terkirim otomatis oleh sistem.</em></p>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>";
+    }
+
+    public string BookingRevisedTemplate(string name, Booking booking)
+    {
+      string detailUrl = $"{_baseUrl}/BookingHistory/Details/{booking.Id}";
+
+      return $@"<!doctype html>
+        <html lang=""en"">
+          <head>
+            <meta charset=""UTF-8"">
+            <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+          </head>
+          <body style=""font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa;"">
+            <table role=""presentation"" style=""width: 100%; background-color: #f8f9fa;"" cellpadding=""0"" cellspacing=""0"">
+              <tr>
+                <td align=""center"">
+                  <table role=""presentation"" class=""card"" style=""border: 1px solid #e0e0e0; border-radius: 4px; max-width: 600px; margin: 20px auto; background-color: white; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);"" cellpadding=""0"" cellspacing=""0"">
+                    <tr>
+                      <td style=""background-color: #03c3ec; color: white; padding: 15px; font-size: 20px; text-align: center; border-radius: 4px 4px 0 0;"">
+                        <strong>Notifikasi Booking Crane | Revisi Diajukan</strong>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style=""padding: 20px; color: #212529; font-size: 16px;"">
+                        <p>Yth, Bapak/Ibu {name},</p>
+                        <p>Booking crane dengan nomor <strong>{booking.BookingNumber}</strong> telah direvisi dan diajukan kembali.</p>
+                        <p>Detail Booking:</p>
+                        <ul>
+                          <li>Crane: <strong>{booking.Crane?.Code ?? "Unknown"}</strong></li>
+                          <li>Lokasi: <strong>{booking.Location}</strong></li>
+                          <li>Tanggal Mulai: <strong>{booking.StartDate:dd/MM/yyyy}</strong></li>
+                          <li>Tanggal Selesai: <strong>{booking.EndDate:dd/MM/yyyy}</strong></li>
+                          <li>Jumlah Revisi: <strong>{booking.RevisionCount}</strong></li>
+                          <li>Terakhir Diubah Oleh: <strong>{booking.LastModifiedBy}</strong></li>
+                          <li>Terakhir Diubah Pada: <strong>{booking.LastModifiedAt:dd/MM/yyyy HH:mm}</strong></li>
+                        </ul>
+                        <p>Booking ini memerlukan persetujuan kembali. Silakan cek link berikut untuk detail:</p>
+                        <table role=""presentation"" border=""0"" cellpadding=""0"" cellspacing=""0"" style=""margin: 0 auto;"">
+                          <tr>
+                            <td align=""center"" style=""border-radius: 4px;"" bgcolor=""#03c3ec"">
+                              <a href=""{detailUrl}"" target=""_blank"" style=""font-size: 16px; font-family: Arial, sans-serif; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; background-color: #03c3ec; border: 1px solid #03c3ec; display: inline-block;"">
+                                Lihat Detail Booking
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        <div style=""color: #6c757d; font-size: 14px; margin-top: 20px;"">
+                          <p>Terima Kasih,<br>
+                          Crane Booking System<br>
+                          <em>Terkirim otomatis oleh sistem.</em></p>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>";
+    }
   }
 }

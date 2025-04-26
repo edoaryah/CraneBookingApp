@@ -93,5 +93,19 @@ namespace AspnetCoreMvcFull.Services
       var body = _emailTemplate.BookingRejectedTemplate(booking.Name, booking, rejectorName, rejectReason);
       await SendEmailAsync(userEmail, subject, body);
     }
+
+    public async Task SendBookingCancelledEmailAsync(Booking booking, string userEmail, string cancelledBy, string cancelReason)
+    {
+      var subject = $"Booking Crane #{booking.BookingNumber} - Dibatalkan";
+      var body = _emailTemplate.BookingCancelledTemplate(booking.Name, booking, cancelledBy, cancelReason);
+      await SendEmailAsync(userEmail, subject, body);
+    }
+
+    public async Task SendBookingRevisedEmailAsync(Booking booking, string receiverEmail)
+    {
+      var subject = $"Booking Crane #{booking.BookingNumber} - Revisi Diajukan";
+      var body = _emailTemplate.BookingRevisedTemplate(booking.Name, booking);
+      await SendEmailAsync(receiverEmail, subject, body);
+    }
   }
 }

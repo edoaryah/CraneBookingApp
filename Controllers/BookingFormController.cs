@@ -12,10 +12,12 @@ namespace AspnetCoreMvcFull.Controllers
       // Get user data from claims
       var userName = User.FindFirst("name")?.Value ?? "";
       var userDepartment = User.FindFirst("department")?.Value ?? "";
+      var userLdap = User.FindFirst("ldap")?.Value ?? "";
 
       // Pass user data to view
       ViewData["UserName"] = userName;
       ViewData["UserDepartment"] = userDepartment;
+      ViewData["UserLdap"] = userLdap;
 
       return View();
     }

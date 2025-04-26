@@ -1,17 +1,23 @@
-// [Models/Booking.cs]
-// Penambahan properti untuk approval (Status, ManagerName, ManagerApprovalTime, dll).
 using System.ComponentModel.DataAnnotations;
 
 namespace AspnetCoreMvcFull.Models
 {
   public enum BookingStatus
   {
-    Pending,
+    PendingApproval,
     ManagerApproved,
-    Approved,
     ManagerRejected,
-    Rejected,
+    PICApproved,
+    PICRejected,
+    Cancelled,
     Done
+  }
+
+  public enum BookingCancelledBy
+  {
+    None = 0,
+    User = 1,
+    PIC = 2
   }
 
   public class Booking
@@ -58,28 +64,41 @@ namespace AspnetCoreMvcFull.Models
     [StringLength(500)]
     public string? CustomHazard { get; set; }
 
-    // Kolom untuk approval
+    // Status and approval properties
     [Required]
-    public BookingStatus Status { get; set; } = BookingStatus.Pending;
+    public BookingStatus Status { get; set; } = BookingStatus.PendingApproval;
 
-    // Data Manager
+    // Manager approval info
     public string? ManagerName { get; set; }
     public DateTime? ManagerApprovalTime { get; set; }
     [StringLength(500)]
     public string? ManagerRejectReason { get; set; }
 
-    // Data PIC Crane
-    public string? PicName { get; set; }
-    public DateTime? PicApprovalTime { get; set; }
+    // PIC approval info
+    public string? ApprovedByPIC { get; set; }
+    public DateTime? ApprovedAtByPIC { get; set; }
     [StringLength(500)]
-    public string? PicRejectReason { get; set; }
+    public string? PICRejectReason { get; set; }
 
+    // PIC completion info
+    public string? DoneByPIC { get; set; }
+    public DateTime? DoneAt { get; set; }
+
+    // Cancellation properties
+    public BookingCancelledBy CancelledBy { get; set; } = BookingCancelledBy.None;
+    public string? CancelledByName { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    public string? CancelledReason { get; set; }
+
+    // Revision tracking
+    public int RevisionCount { get; set; }
+    public DateTime LastModifiedAt { get; set; } = DateTime.Now;
+    public string LastModifiedBy { get; set; } = string.Empty;
+
+    // Navigation properties
     public virtual Crane? Crane { get; set; }
-
     public virtual ICollection<BookingShift> BookingShifts { get; set; } = new List<BookingShift>();
-
     public virtual ICollection<BookingItem> BookingItems { get; set; } = new List<BookingItem>();
-
     public virtual ICollection<BookingHazard> BookingHazards { get; set; } = new List<BookingHazard>();
   }
 }

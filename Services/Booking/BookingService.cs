@@ -64,7 +64,7 @@ namespace AspnetCoreMvcFull.Services
       }).ToList();
     }
 
-    // Dalam BookingService.cs, metode GetBookingByIdAsync
+    // Update the mapping in the GetBookingByIdAsync method in Services/Booking/BookingService.cs
     public async Task<BookingDetailDto> GetBookingByIdAsync(int id)
     {
       var booking = await _context.Bookings
@@ -108,9 +108,24 @@ namespace AspnetCoreMvcFull.Services
         ManagerRejectReason = booking.ManagerRejectReason,
 
         // PIC approval info
-        PicName = booking.PicName,
-        PicApprovalTime = booking.PicApprovalTime,
-        PicRejectReason = booking.PicRejectReason,
+        ApprovedByPIC = booking.ApprovedByPIC,
+        ApprovedAtByPIC = booking.ApprovedAtByPIC,
+        PICRejectReason = booking.PICRejectReason,
+
+        // PIC completion info
+        DoneByPIC = booking.DoneByPIC,
+        DoneAt = booking.DoneAt,
+
+        // Cancellation properties
+        CancelledBy = booking.CancelledBy,
+        CancelledByName = booking.CancelledByName,
+        CancelledAt = booking.CancelledAt,
+        CancelledReason = booking.CancelledReason,
+
+        // Revision tracking
+        RevisionCount = booking.RevisionCount,
+        LastModifiedAt = booking.LastModifiedAt,
+        LastModifiedBy = booking.LastModifiedBy,
 
         Shifts = booking.BookingShifts.Select(s => new BookingShiftDto
         {
@@ -402,7 +417,7 @@ namespace AspnetCoreMvcFull.Services
           PhoneNumber = bookingDto.PhoneNumber,
           Description = bookingDto.Description,
           CustomHazard = bookingDto.CustomHazard,
-          Status = BookingStatus.Pending
+          Status = BookingStatus.PendingApproval
         };
 
         _context.Bookings.Add(booking);
@@ -773,7 +788,7 @@ namespace AspnetCoreMvcFull.Services
         var bookings = await _context.Bookings
             .Include(b => b.Crane)
             .Where(b => b.Status == status)
-            .OrderByDescending(b => b.Status == BookingStatus.Approved ? b.PicApprovalTime : b.SubmitTime)
+            .OrderByDescending(b => b.Status == BookingStatus.PICApproved ? b.ApprovedAtByPIC : b.SubmitTime)
             .ToListAsync();
 
         var result = new List<BookingDetailDto>();
@@ -794,8 +809,8 @@ namespace AspnetCoreMvcFull.Services
             Status = booking.Status,
             ManagerName = booking.ManagerName,
             ManagerApprovalTime = booking.ManagerApprovalTime,
-            PicName = booking.PicName,
-            PicApprovalTime = booking.PicApprovalTime
+            ApprovedByPIC = booking.ApprovedByPIC,
+            ApprovedAtByPIC = booking.ApprovedAtByPIC
             // Properti lain sesuai kebutuhan
           });
         }

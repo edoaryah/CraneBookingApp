@@ -12,5 +12,7 @@ namespace AspnetCoreMvcFull.Services
     Task SendPicApprovalRequestEmailAsync(Booking booking, string picEmail, string picName, string badgeNumber);
     Task SendBookingApprovedEmailAsync(Booking booking, string userEmail);
     Task SendBookingRejectedEmailAsync(Booking booking, string userEmail, string rejectorName, string rejectReason);
+    Task SendBookingCancelledEmailAsync(Booking booking, string userEmail, string cancelledBy, string cancelReason);
+    Task SendBookingRevisedEmailAsync(Booking booking, string receiverEmail);
   }
 }

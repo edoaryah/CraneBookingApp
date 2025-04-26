@@ -29,9 +29,24 @@ namespace AspnetCoreMvcFull.DTOs
     public string? ManagerRejectReason { get; set; }
 
     // PIC approval info
-    public string? PicName { get; set; }
-    public DateTime? PicApprovalTime { get; set; }
-    public string? PicRejectReason { get; set; }
+    public string? ApprovedByPIC { get; set; }
+    public DateTime? ApprovedAtByPIC { get; set; }
+    public string? PICRejectReason { get; set; }
+
+    // PIC completion info
+    public string? DoneByPIC { get; set; }
+    public DateTime? DoneAt { get; set; }
+
+    // Cancellation properties
+    public BookingCancelledBy CancelledBy { get; set; }
+    public string? CancelledByName { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    public string? CancelledReason { get; set; }
+
+    // Revision tracking
+    public int RevisionCount { get; set; }
+    public DateTime LastModifiedAt { get; set; }
+    public string LastModifiedBy { get; set; } = string.Empty;
 
     public List<BookingShiftDto> Shifts { get; set; } = new List<BookingShiftDto>();
     public List<BookingItemDto> Items { get; set; } = new List<BookingItemDto>();
