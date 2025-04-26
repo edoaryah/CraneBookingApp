@@ -6,8 +6,8 @@
 
   // Get the current user's info from ViewData passed from controller
   var currentUserLdap = User.FindFirst("ldapuser")?.Value ?? "";
-  bool isPic = ViewData["IsPicRole"] != null && (bool)ViewData["IsPicRole"];
-  bool isBookingCreator = ViewData["IsBookingCreator"] != null && (bool)ViewData["IsBookingCreator"];
+  bool isPic = ViewData["IsPicRole"] is bool picRole && picRole;
+  bool isBookingCreator = ViewData["IsBookingCreator"] is bool creator && creator;
 }
 
 @section PageStyles
@@ -32,7 +32,6 @@
       border-bottom: 1px solid #ddd;
     }
 
-    /* CSS khusus untuk tabel items */
     #itemsTableContainer .table th:not(:first-child),
     #itemsTableContainer .table td:not(:first-child) {
       text-align: center;
@@ -48,13 +47,11 @@
       border-bottom: 1px solid rgba(0, 0, 0, 0.125);
     }
 
-    /* Pastikan semua sel tabel memiliki border yang konsisten */
     #itemsTableContainer .table th,
     #itemsTableContainer .table td {
       border-color: rgba(0, 0, 0, 0.125);
     }
 
-    /* CSS untuk Shift Selection table - mirip dengan items table */
     #shiftTableContainer {
       box-shadow: none !important;
       border: 1px solid rgba(0, 0, 0, 0.125);
@@ -65,49 +62,41 @@
       border-bottom: 1px solid rgba(0, 0, 0, 0.125);
     }
 
-    /* Pastikan semua sel tabel memiliki border yang konsisten */
     #shiftTableContainer .table th,
     #shiftTableContainer .table td {
       border-color: rgba(0, 0, 0, 0.125);
     }
 
-    /* Menambahkan CSS untuk center align kolom shift */
     #shiftTableContainer .table th:not(:first-child),
     #shiftTableContainer .table td:not(:first-child) {
       text-align: center;
     }
 
-    /* Memastikan checkbox dalam tabel juga di tengah */
     #shiftTableContainer .form-check {
       display: flex;
       justify-content: center;
       margin: 0;
     }
 
-    /* CSS for Hazards Card - matching Items Table style */
     #hazardsCardContainer {
       box-shadow: none !important;
       border: 1px solid rgba(0, 0, 0, 0.125);
       padding: 20px;
     }
 
-    /* Add some better spacing for hazard checkboxes */
     .hazard-checkbox {
       margin-right: 5px;
     }
 
-    /* Add some breathing room between rows of checkboxes */
     #hazardsContainer .col-md-4 {
       margin-bottom: 10px;
     }
 
-    /* Read-only form controls */
     .form-control[readonly] {
       background-color: #f8f9fa;
       opacity: 1;
     }
 
-    /* Hazard badge styling */
     .hazard-badge {
       display: inline-block;
       margin-right: 8px;
@@ -117,7 +106,6 @@
       padding: 5px 12px;
     }
 
-    /* Shift indicator styling */
     .shift-indicator {
       display: inline-block;
       width: 20px;
@@ -138,7 +126,6 @@
       background-color: #d9d9d9;
     }
 
-    /* Timeline styling */
     .timeline {
       margin: 0;
       padding: 0;
@@ -712,8 +699,8 @@
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <form method="post" action="/Approval/ApproveByPic">
-          <input type="hidden" name="bookingId" value="@Model.Id" />
-          <input type="hidden" name="picName" value="@User.Identity.Name" />
+          <input type="hidden" name="bookingId" value="@(Model?.Id ?? 0)" />
+          <input type="hidden" name="picName" value="@(User.Identity?.Name ?? "")" />
           <div class="modal-header">
             <h5 class="modal-title">Konfirmasi Persetujuan</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -735,8 +722,8 @@
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <form method="post" action="/Approval/RejectByPic">
-          <input type="hidden" name="bookingId" value="@Model.Id" />
-          <input type="hidden" name="picName" value="@User.Identity.Name" />
+          <input type="hidden" name="bookingId" value="@(Model?.Id ?? 0)" />
+          <input type="hidden" name="picName" value="@(User.Identity?.Name ?? "")" />
           <div class="modal-header">
             <h5 class="modal-title">Konfirmasi Penolakan</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -761,8 +748,8 @@
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <form method="post" action="/Approval/MarkAsDone">
-          <input type="hidden" name="bookingId" value="@Model.Id" />
-          <input type="hidden" name="picName" value="@User.Identity.Name" />
+          <input type="hidden" name="bookingId" value="@(Model?.Id ?? 0)" />
+          <input type="hidden" name="picName" value="@(User.Identity?.Name ?? "")" />
           <div class="modal-header">
             <h5 class="modal-title">Konfirmasi</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
